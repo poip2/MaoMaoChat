@@ -1,0 +1,93 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+@import "highlight.js/styles/github.min.css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --md-max-width: 720px;
+  --md-font-size: 17px;
+  --md-line-height: 1.7;
+
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  background-color: #fafafa;
+  color: #1c1c1e;
+}
+
+html.dark {
+  background-color: #161618;
+  color: #e5e5e7;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c4;
+  border-radius: 3px;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #3a3a3c;
+}
+
+/* Print / PDF export styles */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  article {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+  }
+
+  pre {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    border: 1px solid #ddd !important;
+    page-break-inside: avoid;
+  }
+
+  table { page-break-inside: avoid; }
+  h1, h2, h3, h4, h5, h6 { page-break-after: avoid; }
+  img { max-width: 100% !important; page-break-inside: avoid; }
+
+  blockquote {
+    border-left: 3px solid #999 !important;
+    color: #333 !important;
+  }
+
+  a {
+    color: #333 !important;
+    text-decoration: underline !important;
+  }
+
+  .mermaid-diagram svg {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+}

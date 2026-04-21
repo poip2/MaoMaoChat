@@ -1,0 +1,128 @@
+<script lang="ts">
+  import { updateAvailable, updateDismissed, dismissUpdate } from "$lib/stores/updater";
+
+  async function openRelease() {
+    try {
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      if ($updateAvailable?.url) {
+        await openUrl($updateAvailable.url);
+      }
+    } catch {
+      if ($updateAvailable?.url) {
+        window.open($updateAvailable.url, "_blank");
+      }
+    }
+  }
+</script>
+
+{#if $updateAvailable && !$updateDismissed}
+  <div class="update-toast">
+    <div class="update-content">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 2v8M5 7l3 3 3-3" />
+        <path d="M3 12v1h10v-1" />
+      </svg>
+      <span class="update-text">
+        MDHero <strong>v{$updateAvailable.version}</strong> is available
+      </span>
+    </div>
+    <div class="update-actions">
+      <button class="update-btn download" onclick={openRelease}>Download</button>
+      <button class="update-btn dismiss" onclick={dismissUpdate}>Later</button>
+    </div>
+  </div>
+{/if}
+
+<style>
+  .update-toast {
+    position: fixed;
+    bottom: 48px;
+    right: 16px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: white;
+    border: 1px solid #e5e5ea;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);
+    font-size: 12px;
+    animation: slideUp 0.3s ease-out;
+  }
+
+  :global(html.dark) .update-toast {
+    background: #2c2c2e;
+    border-color: #3a3a3c;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .update-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #1c1c1e;
+  }
+
+  :global(html.dark) .update-content {
+    color: #e5e5e7;
+  }
+
+  .update-content svg {
+    color: #0891B2;
+    flex-shrink: 0;
+  }
+
+  .update-text {
+    white-space: nowrap;
+  }
+
+  .update-actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  .update-btn {
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+
+  .update-btn.download {
+    background: #0891B2;
+    color: white;
+  }
+
+  .update-btn.download:hover {
+    background: #0E7490;
+  }
+
+  .update-btn.dismiss {
+    background: transparent;
+    color: #8e8e93;
+  }
+
+  .update-btn.dismiss:hover {
+    background: #f2f2f7;
+    color: #636366;
+  }
+
+  :global(html.dark) .update-btn.dismiss:hover {
+    background: #3a3a3c;
+    color: #aeaeb2;
+  }
+
+  @media print {
+    .update-toast { display: none !important; }
+  }
+</style>
