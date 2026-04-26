@@ -1,6 +1,32 @@
+<div align="center">
+
 # MDHero
 
-**Write anywhere, read here.** A beautiful, native Markdown viewer for macOS and Windows. ~11MB. Free. Open source.
+**Write anywhere, read here.**
+
+A beautiful, native Markdown viewer for macOS and Windows. ~11MB. Free. Open source.
+
+[![GitHub Stars](https://img.shields.io/github/stars/vaibhavuk-dev/mdhero?style=flat-square)](https://github.com/vaibhavuk-dev/mdhero/stargazers)
+[![Downloads](https://img.shields.io/github/downloads/vaibhavuk-dev/mdhero/total?style=flat-square)](https://github.com/vaibhavuk-dev/mdhero/releases/latest)
+[![License](https://img.shields.io/github/license/vaibhavuk-dev/mdhero?style=flat-square)](LICENSE)
+![macOS](https://img.shields.io/badge/macOS-supported-blue?style=flat-square&logo=apple)
+![Windows](https://img.shields.io/badge/Windows-supported-blue?style=flat-square&logo=windows)
+[![Built with Tauri](https://img.shields.io/badge/Built_with-Tauri-FFC131?style=flat-square&logo=tauri)](https://tauri.app)
+
+[Download](https://github.com/vaibhavuk-dev/mdhero/releases/latest) · [Website](https://mdhero.app) · [Discussions](https://github.com/vaibhavuk-dev/mdhero/discussions)
+
+</div>
+
+<table>
+<tr>
+<td><img src=".github/assets/hero-light.png" alt="MDHero Light Mode"></td>
+<td><img src=".github/assets/hero-dark.png" alt="MDHero Dark Mode"></td>
+</tr>
+<tr>
+<td align="center"><em>Light mode</em></td>
+<td align="center"><em>Dark mode</em></td>
+</tr>
+</table>
 
 Open local `.md` files, paste AI-generated markdown, or fetch from any public URL — and read it the way it was meant to be read.
 
@@ -47,6 +73,34 @@ Markdown is where developers, writers, and AI live today — READMEs, Claude Cod
 - **Copy as Rich Text** — paste directly into Google Docs, Notion
 - **Copy as Markdown** — raw source
 - **Export PDF** — print-friendly output
+
+---
+
+## Screenshots
+
+### Syntax Highlighting
+
+25+ languages with automatic detection, copy button, and clean typography.
+
+<img src=".github/assets/syntax-highlighting.png" alt="Syntax Highlighting" width="800">
+
+### Math Rendering (KaTeX)
+
+Render LaTeX equations instantly — from inline math to full block equations and matrices.
+
+<img src=".github/assets/math-katex.png" alt="KaTeX Math Rendering" width="800">
+
+### Mermaid Diagrams
+
+Flowcharts, sequence diagrams, class diagrams, and more — rendered natively.
+
+<img src=".github/assets/mermaid-flowchart.png" alt="Mermaid Diagrams" width="800">
+
+### Zen Mode
+
+Distraction-free full-screen reading. Just you and the document.
+
+<img src=".github/assets/mermaid-zen.png" alt="Zen Mode" width="800">
 
 ---
 
