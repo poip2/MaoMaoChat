@@ -1,7 +1,7 @@
 import { writable } from "svelte/store";
 
 const GITHUB_REPO = "vaibhavuk-dev/mdhero";
-const CURRENT_VERSION = "0.1.0";
+const CURRENT_VERSION = "0.2.0";
 const CHECK_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
 const STORAGE_KEY = "mdhero_update_check";
 
