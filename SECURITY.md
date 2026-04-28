@@ -18,3 +18,5 @@ MDHero runs locally on your machine. It does not collect data, require accounts,
 - **Open URL:** When you explicitly paste a URL, MDHero fetches the raw content from that URL.
 
 Both of these are user-initiated or clearly disclosed.
+
+File reads, writes (from the in-app editor), and rendering all happen locally. Your files never leave your machine.

@@ -2,9 +2,7 @@
 
 # MDHero
 
-**Write anywhere, read here.**
-
-A beautiful, native Markdown viewer for macOS and Windows. ~11MB. Free. Open source.
+A beautiful, native Markdown viewer and lightweight editor for macOS and Windows. ~11MB. Free. Open source.
 
 [![GitHub Stars](https://img.shields.io/github/stars/vaibhavuk-dev/mdhero?style=flat-square)](https://github.com/vaibhavuk-dev/mdhero/stargazers)
 [![Downloads](https://img.shields.io/github/downloads/vaibhavuk-dev/mdhero/total?style=flat-square)](https://github.com/vaibhavuk-dev/mdhero/releases/latest)
@@ -28,7 +26,7 @@ A beautiful, native Markdown viewer for macOS and Windows. ~11MB. Free. Open sou
 </tr>
 </table>
 
-Open local `.md` files, paste AI-generated markdown, or fetch from any public URL — and read it the way it was meant to be read.
+Open local `.md` files, paste AI-generated markdown, or fetch from any public URL — and read or edit it the way it was meant to be.
 
 ---
 
@@ -36,7 +34,7 @@ Open local `.md` files, paste AI-generated markdown, or fetch from any public UR
 
 Markdown is where developers, writers, and AI live today — READMEs, Claude Code plans, LLM chat exports, notes, documentation. But opening a `.md` file in a code editor gives you ugly monospace text. Opening a web-based viewer means uploading your files. GitHub renders it beautifully but only if the file is in a repo.
 
-**MDHero is a native viewer for everything in between.** Your files stay local. Rendering is instant. Works offline. Looks like it belongs on your machine.
+**MDHero is a native app for everything in between.** Your files stay local. Rendering is instant. Edit in place when you need to. Works offline. Looks like it belongs on your machine.
 
 ---
 
@@ -49,6 +47,13 @@ Markdown is where developers, writers, and AI live today — READMEs, Claude Cod
 - **Reader controls** — adjust font, size, line height, width
 - **Zen mode** — distraction-free full-screen reading
 - **Print/Export to PDF** — with clean print styles
+
+### Editing (v0.2.0)
+- **Lightweight in-app editor** — `Cmd+E` flips any local file into edit mode
+- **Save with `Cmd+S`** — writes back to disk; the file watcher knows it was you and skips the reload
+- **Stays where you were** — source-line scroll sync keeps your position across viewer ↔ raw ↔ edit
+- **Dirty indicator** — `•` in the tab title and toolbar when you have unsaved changes
+- **Per-tab edit state** — switch tabs and back; your edits are right where you left them
 
 ### Navigation
 - **Multiple tabs** — open many files, drag to reorder, Cmd+1–9 to switch
@@ -121,9 +126,11 @@ Or build from source (see below).
 | `Cmd+O` | Browse files |
 | `Cmd+Shift+V` | Paste markdown |
 | `Cmd+T` | New tab (home) |
-| `Cmd+W` | Close tab |
+| `Cmd+W` | Close tab (confirms if unsaved edits) |
 | `Cmd+1..9` | Switch to tab N |
 | `Cmd+F` | Find in document |
+| `Cmd+E` | Toggle edit mode |
+| `Cmd+S` | Save edits to disk |
 | `Cmd+U` | Toggle raw markdown view |
 | `Cmd+Shift+F` | Zen mode |
 | `Cmd+=` / `Cmd+-` | Zoom in / out |

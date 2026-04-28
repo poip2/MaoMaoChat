@@ -110,7 +110,7 @@
   <div class="hero-bar">
     <h1 class="hero-title">MDHero</h1>
     <span class="hero-sep">&mdash;</span>
-    <p class="hero-desc">Write anywhere, read here.</p>
+    <p class="hero-desc">A native Markdown reader and editor.</p>
   </div>
 
   <!-- Quick actions -->
