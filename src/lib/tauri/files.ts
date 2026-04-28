@@ -10,6 +10,10 @@ export async function readMarkdownFile(path: string): Promise<string> {
   return invoke<string>("read_markdown_file", { path });
 }
 
+export async function saveFile(path: string, content: string): Promise<void> {
+  await invoke("write_markdown_file", { path, content });
+}
+
 export async function openFile(path: string): Promise<void> {
   const fileName = path.split("/").pop() ?? path;
 

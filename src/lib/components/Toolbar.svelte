@@ -12,12 +12,22 @@
     onUrl = () => {},
     rawMode = false,
     onRawToggle = () => {},
+    isEditing = false,
+    dirty = false,
+    canEdit = false,
+    onEditToggle = () => {},
+    onSave = () => {},
   }: {
     onPaste?: () => void;
     onOpen?: () => void;
     onUrl?: () => void;
     rawMode?: boolean;
     onRawToggle?: () => void;
+    isEditing?: boolean;
+    dirty?: boolean;
+    canEdit?: boolean;
+    onEditToggle?: () => void;
+    onSave?: () => void;
   } = $props();
 
   let currentHeading = $derived(
@@ -97,7 +107,7 @@
         Paste
       </button>
       <button onclick={onUrl} class="btn btn-ghost" title="Open URL">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="5.5"/><ellipse cx="7" cy="7" rx="2.5" ry="5.5"/><line x1="1.5" y1="7" x2="12.5" y2="7"/></svg>
+        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="5.5"/><ellipse cx="7" cy="7" rx="2.5" ry="5.5"/><line x1="1.5" y1="7" x2="12.5" y2="7"/></svg>
       </button>
     </div>
 
@@ -111,69 +121,137 @@
   </div>
 
   <div class="toolbar-right">
-    {#if $document.renderedHtml && $tocEntries.length > 0}
+    <button
+      onclick={toggleToc}
+      class="btn btn-icon"
+      class:active={$tocVisible}
+      disabled={!$document.renderedHtml || $tocEntries.length === 0 || isEditing}
+      title={!$document.renderedHtml
+        ? 'Table of Contents (open a file first)'
+        : isEditing
+        ? 'Table of Contents (exit edit mode to use)'
+        : $tocEntries.length === 0
+        ? 'Table of Contents (no headings in this document)'
+        : 'Table of Contents'}
+    >
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="10" y2="8"/><line x1="2" y1="12" x2="12" y2="12"/></svg>
+    </button>
+
+    <button
+      onclick={toggleReaderControls}
+      class="btn btn-icon"
+      class:active={showReaderControls}
+      disabled={!$document.renderedHtml}
+      title={$document.renderedHtml ? 'Reading preferences (Aa)' : 'Reading preferences (open a file first)'}
+    >
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><text x="1" y="12" font-size="12" font-weight="700" stroke="none" fill="currentColor" font-family="-apple-system, BlinkMacSystemFont, sans-serif">Aa</text></svg>
+    </button>
+
+    <button
+      onclick={onRawToggle}
+      class="btn btn-icon"
+      class:active={rawMode}
+      disabled={!$document.renderedHtml || isEditing}
+      title={!$document.renderedHtml
+        ? 'View raw markdown (open a file first)'
+        : isEditing
+        ? 'View raw markdown (exit edit mode to use)'
+        : 'View raw markdown (Cmd+U)'}
+    >
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6,5 2,8 6,11"/>
+        <polyline points="10,5 14,8 10,11"/>
+        <line x1="9" y1="3" x2="7" y2="13"/>
+      </svg>
+    </button>
+
+    <button
+      onclick={onEditToggle}
+      class="btn btn-icon"
+      class:active={isEditing}
+      disabled={!$document.renderedHtml || !canEdit}
+      title={!$document.renderedHtml
+        ? 'Edit (open a file first)'
+        : !canEdit
+        ? 'Edit (only available for local files)'
+        : isEditing
+        ? 'Exit edit mode (Cmd+E)'
+        : 'Edit (Cmd+E)'}
+    >
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11.5 2.5l2 2-8 8H3.5v-2l8-8z"/>
+        <path d="M10 4l2 2"/>
+      </svg>
+    </button>
+
+    <button
+      onclick={onSave}
+      class="btn btn-icon save-btn"
+      class:dirty
+      disabled={!dirty}
+      title={dirty ? 'Save unsaved changes (Cmd+S)' : 'Save (no changes to save)'}
+    >
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 3h8l2 2v8H3z"/>
+        <path d="M5 3v4h6V3"/>
+        <rect x="5" y="9" width="6" height="4"/>
+      </svg>
+      {#if dirty}
+        <span class="dirty-dot"></span>
+      {/if}
+    </button>
+
+    <div class="relative">
       <button
-        onclick={toggleToc}
+        onclick={toggleCopyMenu}
         class="btn btn-icon"
-        class:active={$tocVisible}
-        title="Table of Contents"
+        disabled={!$document.renderedHtml || isEditing}
+        title={!$document.renderedHtml
+          ? 'Copy content (open a file first)'
+          : isEditing
+          ? 'Copy content (exit edit mode to use)'
+          : 'Copy content'}
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="10" y2="8"/><line x1="2" y1="12" x2="12" y2="12"/></svg>
-      </button>
-    {/if}
-
-    {#if $document.renderedHtml}
-      <button
-        onclick={toggleReaderControls}
-        class="btn btn-icon"
-        class:active={showReaderControls}
-        title="Reading preferences (Aa)"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><text x="2" y="12" font-size="10" font-weight="600" stroke="none" fill="currentColor" font-family="sans-serif">Aa</text></svg>
-      </button>
-
-      <button
-        onclick={onRawToggle}
-        class="btn btn-icon"
-        class:active={rawMode}
-        title="View raw markdown (Cmd+U)"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="2,4 5,4 5,12"/><polyline points="8,4 11,4 11,12"/><line x1="3" y1="8" x2="7" y2="8"/><line x1="13" y1="4" x2="13" y2="12"/></svg>
-      </button>
-
-      <div class="relative">
-        <button
-          onclick={toggleCopyMenu}
-          class="btn btn-icon"
-          title="Copy content"
-        >
-          {#if copyFeedback}
-            <span style="font-size:11px">{copyFeedback}</span>
-          {:else}
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 11V3h8"/></svg>
-          {/if}
-        </button>
-
-        {#if showCopyMenu}
-          <div class="dropdown">
-            <button onclick={handleCopyRichText} class="dropdown-item">
-              <span>Rich Text</span>
-              <span class="dropdown-hint">for Docs / Notion</span>
-            </button>
-            <button onclick={handleCopyMarkdown} class="dropdown-item">
-              <span>Markdown</span>
-              <span class="dropdown-hint">raw source</span>
-            </button>
-          </div>
+        {#if copyFeedback}
+          <span style="font-size:11px">{copyFeedback}</span>
+        {:else}
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 11V3h8"/></svg>
         {/if}
-      </div>
-
-      <button onclick={handleExportPdf} class="btn btn-icon" title="Export PDF (Print)">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="10" height="7" rx="1"/><path d="M5 6V3h6v3"/><circle cx="11" cy="9" r="0.5" fill="currentColor" stroke="none"/></svg>
       </button>
 
-      <div class="separator"></div>
-    {/if}
+      {#if showCopyMenu}
+        <div class="dropdown">
+          <button onclick={handleCopyRichText} class="dropdown-item">
+            <span>Rich Text</span>
+            <span class="dropdown-hint">for Docs / Notion</span>
+          </button>
+          <button onclick={handleCopyMarkdown} class="dropdown-item">
+            <span>Markdown</span>
+            <span class="dropdown-hint">raw source</span>
+          </button>
+        </div>
+      {/if}
+    </div>
+
+    <button
+      onclick={handleExportPdf}
+      class="btn btn-icon"
+      disabled={!$document.renderedHtml || isEditing}
+      title={!$document.renderedHtml
+        ? 'Export PDF (open a file first)'
+        : isEditing
+        ? 'Export PDF (exit edit mode to use)'
+        : 'Export PDF'}
+    >
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 2h6l3 3v9H4z"/>
+        <path d="M10 2v3h3"/>
+        <polyline points="6,9 8,11 10,9"/>
+        <line x1="8" y1="7" x2="8" y2="11"/>
+      </svg>
+    </button>
+
+    <div class="separator"></div>
 
     <button onclick={handleThemeToggle} class="btn btn-icon" title="Toggle theme">
       {getThemeIcon($themeMode)}
@@ -275,24 +353,41 @@
   .btn-icon {
     padding: 5px 10px;
     background: transparent;
-    color: #636366;
+    color: #1c1c1e;
     border-radius: 6px;
     font-size: 12px;
     font-weight: 500;
   }
 
   :global(html.dark) .btn-icon {
-    color: #8e8e93;
-  }
-
-  .btn-icon:hover {
-    background: #f2f2f7;
-    color: #1c1c1e;
-  }
-
-  :global(html.dark) .btn-icon:hover {
-    background: #2c2c2e;
     color: #e5e5e7;
+  }
+
+  .btn-icon:hover:not(:disabled):not(.active) {
+    background: #f2f2f7;
+    color: #000000;
+  }
+
+  :global(html.dark) .btn-icon:hover:not(:disabled):not(.active) {
+    background: #2c2c2e;
+    color: #ffffff;
+  }
+
+  .btn-icon.active:hover:not(:disabled) {
+    background: #d4eef3;
+  }
+
+  :global(html.dark) .btn-icon.active:hover:not(:disabled) {
+    background: #14304a;
+  }
+
+  .btn-icon:disabled {
+    opacity: 0.22;
+    cursor: not-allowed;
+  }
+
+  :global(html.dark) .btn-icon:disabled {
+    opacity: 0.28;
   }
 
   .btn-icon.active {
@@ -394,6 +489,37 @@
   .dropdown-hint {
     font-size: 11px;
     color: #aeaeb2;
+  }
+
+  .save-btn {
+    position: relative;
+  }
+
+  .save-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .save-btn.dirty {
+    color: #0891B2;
+  }
+
+  :global(html.dark) .save-btn.dirty {
+    color: #22D3EE;
+  }
+
+  .dirty-dot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #0891B2;
+  }
+
+  :global(html.dark) .dirty-dot {
+    background: #22D3EE;
   }
 
   @media print {

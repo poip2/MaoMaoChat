@@ -37,6 +37,7 @@ pub fn run() {
         .manage(OpenedFiles::default())
         .invoke_handler(tauri::generate_handler![
             commands::read_markdown_file,
+            commands::write_markdown_file,
             commands::list_claude_plans,
             commands::list_folder_md_files,
             watcher::start_watching,

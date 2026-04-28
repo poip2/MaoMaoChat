@@ -1,13 +1,19 @@
 <script lang="ts">
   import { tabStore, HOME_TAB_ID } from "$lib/stores/tabs";
 
+  let {
+    onCloseTab = (id: string) => tabStore.closeTab(id),
+  }: {
+    onCloseTab?: (id: string) => void;
+  } = $props();
+
   const { tabs, activeTabId } = tabStore;
   let dragIndex = $state(-1);
   let overIndex = $state(-1);
 
   function handleClose(e: MouseEvent, id: string) {
     e.stopPropagation();
-    tabStore.closeTab(id);
+    onCloseTab(id);
   }
 
   function handleMouseDown(e: MouseEvent, idx: number) {
@@ -76,7 +82,9 @@
           class:active={$activeTabId === tab.id}
           class:drag-over={overIndex === idx && dragIndex !== idx && dragIndex >= 0}
         >
-          <span class="tab-label">{tab.fileName}</span>
+          <span class="tab-label">
+            {#if tab.dirty}<span class="tab-dirty" title="Unsaved changes">•</span>{/if}{tab.fileName}
+          </span>
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <span
             role="button"
@@ -202,6 +210,16 @@
     text-overflow: ellipsis;
     flex: 1;
     text-align: left;
+  }
+
+  .tab-dirty {
+    color: #0891B2;
+    font-weight: 700;
+    margin-right: 4px;
+  }
+
+  :global(html.dark) .tab-dirty {
+    color: #22D3EE;
   }
 
   .tab-close {

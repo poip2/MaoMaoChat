@@ -1,8 +1,11 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { reloadCurrentFile } from "./files";
+import { tabStore } from "../stores/tabs";
 
 let unlisten: UnlistenFn | null = null;
 let reloadTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const OWN_SAVE_SUPPRESSION_MS = 1500;
 
 export async function startFileWatcher(filePath: string): Promise<void> {
   if (unlisten) {
@@ -13,6 +16,11 @@ export async function startFileWatcher(filePath: string): Promise<void> {
     // Debounce on frontend too — editors may trigger multiple events
     if (reloadTimeout) clearTimeout(reloadTimeout);
     reloadTimeout = setTimeout(() => {
+      // Skip reload if this file-changed event was triggered by our own save
+      const lastSavedAt = tabStore.getLastSavedAt(filePath);
+      if (lastSavedAt && Date.now() - lastSavedAt < OWN_SAVE_SUPPRESSION_MS) {
+        return;
+      }
       reloadCurrentFile(filePath);
     }, 100);
   });

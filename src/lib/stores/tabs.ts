@@ -9,6 +9,10 @@ export interface Tab {
   frontmatter: Record<string, unknown> | null;
   wordCount: number;
   scrollTop: number;
+  isEditing: boolean;
+  editContent: string;
+  dirty: boolean;
+  lastSavedAt: number;
 }
 
 export const HOME_TAB_ID = "__home__";
@@ -29,15 +33,34 @@ function createTabStore() {
     if (existing) {
       activeTabId.set(existing.id);
       tabs.update((ts) =>
-        ts.map((t) =>
-          t.id === existing.id ? { ...t, content, renderedHtml, frontmatter: frontmatter ?? null, wordCount: wordCount ?? 0 } : t
-        )
+        ts.map((t) => {
+          if (t.id !== existing.id) return t;
+          // Preserve edit state on re-add — only refresh content/render if not dirty
+          if (t.isEditing) {
+            const dirty = t.editContent !== content;
+            return { ...t, content, renderedHtml, frontmatter: frontmatter ?? null, wordCount: wordCount ?? 0, dirty };
+          }
+          return { ...t, content, renderedHtml, frontmatter: frontmatter ?? null, wordCount: wordCount ?? 0, editContent: content, dirty: false };
+        })
       );
       return existing.id;
     }
 
     const id = generateId();
-    const newTab: Tab = { id, filePath, fileName, content, renderedHtml, frontmatter: frontmatter ?? null, wordCount: wordCount ?? 0, scrollTop: 0 };
+    const newTab: Tab = {
+      id,
+      filePath,
+      fileName,
+      content,
+      renderedHtml,
+      frontmatter: frontmatter ?? null,
+      wordCount: wordCount ?? 0,
+      scrollTop: 0,
+      isEditing: false,
+      editContent: content,
+      dirty: false,
+      lastSavedAt: 0,
+    };
 
     tabs.update((ts) => [...ts, newTab]);
     activeTabId.set(id);
@@ -88,9 +111,24 @@ function createTabStore() {
 
   function updateTabContent(filePath: string, content: string, renderedHtml: string, frontmatter?: Record<string, unknown> | null, wordCount?: number) {
     tabs.update((ts) =>
-      ts.map((t) =>
-        t.filePath === filePath ? { ...t, content, renderedHtml, frontmatter: frontmatter ?? t.frontmatter, wordCount: wordCount ?? t.wordCount } : t
-      )
+      ts.map((t) => {
+        if (t.filePath !== filePath) return t;
+        const next: Tab = {
+          ...t,
+          content,
+          renderedHtml,
+          frontmatter: frontmatter ?? t.frontmatter,
+          wordCount: wordCount ?? t.wordCount,
+        };
+        // Preserve in-progress edits when content updates from external sources (file watcher)
+        if (t.isEditing) {
+          next.dirty = t.editContent !== content;
+        } else {
+          next.editContent = content;
+          next.dirty = false;
+        }
+        return next;
+      })
     );
   }
 
@@ -109,6 +147,42 @@ function createTabStore() {
     });
   }
 
+  function setEditing(id: string, editing: boolean) {
+    tabs.update((ts) =>
+      ts.map((t) => {
+        if (t.id !== id) return t;
+        // When entering edit mode, sync editContent to current content if not already dirty
+        if (editing && !t.isEditing && !t.dirty) {
+          return { ...t, isEditing: true, editContent: t.content };
+        }
+        return { ...t, isEditing: editing };
+      })
+    );
+  }
+
+  function updateEditContent(id: string, newContent: string) {
+    tabs.update((ts) =>
+      ts.map((t) => {
+        if (t.id !== id) return t;
+        return { ...t, editContent: newContent, dirty: newContent !== t.content };
+      })
+    );
+  }
+
+  function markSaved(id: string) {
+    tabs.update((ts) =>
+      ts.map((t) => {
+        if (t.id !== id) return t;
+        return { ...t, content: t.editContent, dirty: false, lastSavedAt: Date.now() };
+      })
+    );
+  }
+
+  function getLastSavedAt(filePath: string): number {
+    const t = get(tabs).find((x) => x.filePath === filePath);
+    return t?.lastSavedAt ?? 0;
+  }
+
   return {
     tabs,
     activeTabId,
@@ -119,6 +193,11 @@ function createTabStore() {
     getActiveTab,
     reorderTabs,
     goHome,
+    setEditing,
+    updateEditContent,
+    markSaved,
+    getLastSavedAt,
+    saveScrollPosition,
   };
 }
 

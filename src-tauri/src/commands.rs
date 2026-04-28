@@ -17,6 +17,17 @@ pub fn read_markdown_file(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn write_markdown_file(path: String, content: String) -> Result<(), String> {
+    let p = Path::new(&path);
+
+    if p.exists() && !p.is_file() {
+        return Err(format!("Not a file: {}", path));
+    }
+
+    fs::write(p, content).map_err(|e| format!("Failed to write file: {}", e))
+}
+
+#[tauri::command]
 pub fn list_claude_plans() -> Result<Vec<PlanFile>, String> {
     let home = std::env::var("HOME").map_err(|_| "Cannot determine home directory".to_string())?;
     let plans_dir = Path::new(&home).join(".claude").join("plans");

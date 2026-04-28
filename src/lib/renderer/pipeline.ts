@@ -69,6 +69,20 @@ export interface RenderResult {
 let md: MarkdownIt | null = null;
 let initialized = false;
 
+/**
+ * Stamp top-level block elements with `data-source-line="N"` (0-indexed line in
+ * source markdown). Used by the scroll-sync logic to map view ↔ raw ↔ editor.
+ */
+function addSourceLinePlugin(mdInstance: MarkdownIt) {
+  mdInstance.core.ruler.push("source-line", (state) => {
+    for (const token of state.tokens) {
+      if (token.map && token.level === 0 && token.type.endsWith("_open")) {
+        token.attrSet("data-source-line", String(token.map[0]));
+      }
+    }
+  });
+}
+
 export async function initRenderer(): Promise<void> {
   if (initialized) return;
 
@@ -104,6 +118,7 @@ export async function initRenderer(): Promise<void> {
         .replace(/[^\w\s-]/g, "")
         .replace(/\s+/g, "-"),
   });
+  addSourceLinePlugin(md);
 
   initialized = true;
 }
@@ -137,6 +152,7 @@ export function renderFull(markdown: string, baseDir?: string): RenderResult {
       permalink: false,
       slugify: (s: string) => s.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-"),
     });
+    addSourceLinePlugin(md);
     initialized = true;
   }
 

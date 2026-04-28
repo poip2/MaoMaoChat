@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
   import { document as docStore } from "$lib/stores/document";
-  import { tabStore, HOME_TAB_ID } from "$lib/stores/tabs";
-  import { initRenderer } from "$lib/renderer/pipeline";
-  import { openFile, openFileDialog } from "$lib/tauri/files";
+  import { tabStore, HOME_TAB_ID, type Tab } from "$lib/stores/tabs";
+  import { initRenderer, renderFull } from "$lib/renderer/pipeline";
+  import { openFile, openFileDialog, saveFile } from "$lib/tauri/files";
   import { settings } from "$lib/stores/settings";
   import { startFileWatcher } from "$lib/tauri/watcher";
   import { themeMode, cycleTheme } from "$lib/stores/theme";
@@ -24,8 +24,10 @@
   import ScrollToTop from "$lib/components/ScrollToTop.svelte";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
   import UpdateToast from "$lib/components/UpdateToast.svelte";
+  import Editor from "$lib/components/Editor.svelte";
   import { updateScrollPercent } from "$lib/stores/recents";
   import { checkForUpdates } from "$lib/stores/updater";
+  import { getCurrentSourceLine, scrollToSourceLine, type ViewMode } from "$lib/utils/scroll-sync";
 
   let rendererReady = $state(false);
   let lastWatchedPath: string | null = null;
@@ -42,6 +44,123 @@
   let lightboxIndex = $state(0);
 
   const { tabs, activeTabId } = tabStore;
+
+  let activeTab = $derived<Tab | null>($tabs.find((t) => t.id === $activeTabId) ?? null);
+  let canEditActive = $derived(
+    !!activeTab?.filePath
+    && !activeTab.filePath.startsWith("paste://")
+    && !activeTab.filePath.startsWith("url://")
+  );
+  let currentMode = $derived<ViewMode>(
+    activeTab?.isEditing ? "editor" : rawMode ? "raw" : "viewer"
+  );
+
+  /**
+   * Switch view mode while preserving the source-line position so the user
+   * stays anchored at the same place in the document.
+   */
+  function switchMode(target: ViewMode) {
+    if (!activeTab || target === currentMode) return;
+    if (target === "editor" && !canEditActive) return;
+
+    const line = getCurrentSourceLine(currentMode);
+
+    // Apply state changes for the target mode
+    if (target === "editor") {
+      tabStore.setEditing(activeTab.id, true);
+    } else {
+      // Exiting edit mode: re-render `editContent` (in-memory) so the viewer
+      // shows the latest unsaved changes immediately. The dirty indicator
+      // continues to mark that the changes aren't on disk yet.
+      if (activeTab.isEditing && activeTab.dirty) {
+        const baseDir = activeTab.filePath.includes("/")
+          ? activeTab.filePath.substring(0, activeTab.filePath.lastIndexOf("/"))
+          : undefined;
+        const result = renderFull(activeTab.editContent, baseDir);
+        // Update the rendered HTML in the docStore so the viewer reflects
+        // the unsaved edits. We do NOT call tabStore.updateTabContent or
+        // markSaved — the source on disk is unchanged, dirty stays true.
+        docStore.set({
+          filePath: activeTab.filePath,
+          fileName: activeTab.fileName,
+          content: activeTab.content,             // disk content (unchanged)
+          renderedHtml: result.html,              // preview of unsaved edits
+          frontmatter: result.frontmatter,
+          wordCount: result.wordCount,
+          loading: false,
+          error: null,
+        });
+      }
+      if (activeTab.isEditing) tabStore.setEditing(activeTab.id, false);
+      rawMode = target === "raw";
+    }
+
+    // Scroll the destination after it renders. Two rAFs are needed for the
+    // editor — the first lets Svelte mount the textarea, the second lets the
+    // browser compute its scrollHeight before we set scrollTop.
+    tick().then(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => scrollToSourceLine(target, line));
+      });
+    });
+  }
+
+  async function handleSave(tab: Tab) {
+    if (!tab.dirty) return;
+    try {
+      await saveFile(tab.filePath, tab.editContent);
+      const baseDir = tab.filePath.includes("/")
+        ? tab.filePath.substring(0, tab.filePath.lastIndexOf("/"))
+        : undefined;
+      const result = renderFull(tab.editContent, baseDir);
+      tabStore.markSaved(tab.id);
+      tabStore.updateTabContent(
+        tab.filePath,
+        tab.editContent,
+        result.html,
+        result.frontmatter,
+        result.wordCount
+      );
+      // Sync docStore so the rendered view reflects the saved content immediately
+      // when the user toggles out of edit mode (the tab-sync $effect only fires on
+      // active-tab change, not on content updates of the same tab).
+      docStore.set({
+        filePath: tab.filePath,
+        fileName: tab.fileName,
+        content: tab.editContent,
+        renderedHtml: result.html,
+        frontmatter: result.frontmatter,
+        wordCount: result.wordCount,
+        loading: false,
+        error: null,
+      });
+    } catch (err) {
+      console.error("Save failed:", err);
+      alert(`Save failed: ${err}`);
+    }
+  }
+
+  function handleEditToggle() {
+    if (!canEditActive || !activeTab) return;
+    if (activeTab.isEditing) {
+      // Exiting edit — go back to whichever non-edit mode was active before
+      switchMode(rawMode ? "raw" : "viewer");
+    } else {
+      switchMode("editor");
+    }
+  }
+
+  function handleRawToggle() {
+    if (activeTab?.isEditing) return;
+    switchMode(rawMode ? "viewer" : "raw");
+  }
+
+  function handleCloseTab(id: string) {
+    const t = $tabs.find((x) => x.id === id);
+    if (!t) return;
+    if (t.dirty && !confirm(`Discard unsaved changes to ${t.fileName}?`)) return;
+    tabStore.closeTab(id);
+  }
 
   onMount(async () => {
     initRenderer();
@@ -167,10 +286,27 @@
       return;
     }
 
-    // Cmd+U raw toggle
+    // Cmd+E toggle edit mode
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "e") {
+      e.preventDefault();
+      handleEditToggle();
+      return;
+    }
+
+    // Cmd+S save (works whenever the active tab has unsaved changes,
+    // even from reader mode after toggling out of edit)
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "s") {
+      e.preventDefault();
+      if (activeTab?.dirty) {
+        handleSave(activeTab);
+      }
+      return;
+    }
+
+    // Cmd+U raw toggle (disabled in edit mode)
     if ((e.metaKey || e.ctrlKey) && e.key === "u") {
       e.preventDefault();
-      rawMode = !rawMode;
+      handleRawToggle();
       return;
     }
 
@@ -181,15 +317,12 @@
       return;
     }
 
-    // Cmd+W close tab
+    // Cmd+W close tab (with dirty confirm)
     if ((e.metaKey || e.ctrlKey) && e.key === "w") {
       e.preventDefault();
-      const activeId = tabStore.getActiveTab()?.id;
-      if (activeId) {
-        tabStore.closeTab(activeId);
-      } else {
-        // On home tab with no file tabs, do nothing
-      }
+      const t = tabStore.getActiveTab();
+      if (!t) return;
+      handleCloseTab(t.id);
       return;
     }
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "f") {
@@ -204,8 +337,9 @@
       return;
     }
 
-    // Vim-style keys — only when no input is focused
+    // Vim-style keys — only when no input is focused and not in edit mode
     if (isInputFocused() || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (activeTab?.isEditing) return;
     if (!$docStore.renderedHtml) return;
 
     const now = Date.now();
@@ -330,11 +464,22 @@
 <div class="min-h-screen transition-colors page-root">
   {#if !zenMode}
     <ProgressBar />
-    <Toolbar onOpen={() => (openVisible = true)} onPaste={() => { pasteDefaultMode = "paste"; pasteVisible = true; }} onUrl={() => { pasteDefaultMode = "url"; pasteVisible = true; }} {rawMode} onRawToggle={() => (rawMode = !rawMode)} />
-    <TabBar />
+    <Toolbar
+      onOpen={() => (openVisible = true)}
+      onPaste={() => { pasteDefaultMode = "paste"; pasteVisible = true; }}
+      onUrl={() => { pasteDefaultMode = "url"; pasteVisible = true; }}
+      {rawMode}
+      onRawToggle={handleRawToggle}
+      isEditing={activeTab?.isEditing ?? false}
+      dirty={activeTab?.dirty ?? false}
+      canEdit={canEditActive}
+      onEditToggle={handleEditToggle}
+      onSave={() => activeTab && handleSave(activeTab)}
+    />
+    <TabBar onCloseTab={handleCloseTab} />
   {/if}
   <DropZone />
-  {#if !zenMode}
+  {#if !zenMode && !activeTab?.isEditing}
     <TableOfContents />
   {/if}
   <SearchOverlay bind:visible={searchVisible} />
@@ -357,9 +502,20 @@
       </div>
     </div>
   {:else if $docStore.renderedHtml}
-    {#if rawMode}
+    {#if activeTab?.isEditing}
+      <Editor
+        value={activeTab.editContent}
+        onChange={(v) => tabStore.updateEditContent(activeTab!.id, v)}
+        fontSize={$settings.fontSize}
+        lineHeight={$settings.lineHeight}
+        maxWidth={$settings.maxWidth}
+      />
+    {:else if rawMode}
       <main class="content-main">
-        <pre class="raw-source"><code>{$docStore.content}</code></pre>
+        <pre
+          class="raw-source"
+          style="font-size: {$settings.fontSize}px; line-height: {$settings.lineHeight}; max-width: {$settings.maxWidth}px;"
+        ><code>{$docStore.content}</code></pre>
       </main>
     {:else}
       <FrontmatterBar />
@@ -370,7 +526,7 @@
         />
       </main>
     {/if}
-    {#if !zenMode}
+    {#if !zenMode && !activeTab?.isEditing}
       <StatusBar />
       <ScrollToTop />
     {/if}
@@ -433,12 +589,9 @@
   }
 
   .raw-source {
-    max-width: 800px;
     margin: 0 auto;
     padding: 24px 32px;
-    font-size: 13px;
     font-family: "SF Mono", "JetBrains Mono", Menlo, monospace;
-    line-height: 1.6;
     color: #1c1c1e;
     white-space: pre-wrap;
     word-break: break-word;
