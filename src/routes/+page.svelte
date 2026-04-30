@@ -26,7 +26,8 @@
   import UpdateToast from "$lib/components/UpdateToast.svelte";
   import Editor from "$lib/components/Editor.svelte";
   import { updateScrollPercent } from "$lib/stores/recents";
-  import { checkForUpdates } from "$lib/stores/updater";
+  import { checkForUpdates, updateAvailable, updateDismissed, checkInFlight } from "$lib/stores/updater";
+  import { get } from "svelte/store";
   import { getCurrentSourceLine, scrollToSourceLine, type ViewMode } from "$lib/utils/scroll-sync";
 
   let rendererReady = $state(false);
@@ -185,6 +186,17 @@
     };
     (window as any).__mdhero_zen = () => {
       zenMode = !zenMode;
+    };
+    (window as any).__mdhero_check_updates = async () => {
+      if (get(checkInFlight)) return;
+      // Reset dismissal so a manual check always re-surfaces an available update.
+      updateDismissed.set(false);
+      await checkForUpdates(true);
+      // If still nothing, give the user explicit feedback — silence is confusing
+      // when a menu item is the trigger.
+      if (!get(updateAvailable)) {
+        alert("MDHero is up to date.");
+      }
     };
 
     // Listen for keyboard shortcuts

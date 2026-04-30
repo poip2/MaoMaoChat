@@ -5,6 +5,7 @@
   import { recentFiles, clearRecentFiles } from "../stores/recents";
   import { pinnedFolders } from "../stores/pinned";
   import { settings } from "../stores/settings";
+  import UpdateBanner from "./UpdateBanner.svelte";
 
   let { onOpenUrl = () => {} }: { onOpenUrl?: () => void } = $props();
 
@@ -112,6 +113,9 @@
     <span class="hero-sep">&mdash;</span>
     <p class="hero-desc">A native Markdown reader and editor.</p>
   </div>
+
+  <!-- Update banner (renders nothing when no update available or dismissed) -->
+  <UpdateBanner />
 
   <!-- Quick actions -->
   <div class="quick-actions">

@@ -56,6 +56,7 @@ pub fn run() {
                         "paste_md" => { let _ = window.eval("window.__mdhero_paste?.()"); }
                         "theme" => { let _ = window.eval("window.__mdhero_toggle_theme?.()"); }
                         "find" => { let _ = window.eval("window.__mdhero_find?.()"); }
+                        "check_updates" => { let _ = window.eval("window.__mdhero_check_updates?.()"); }
                         _ => {}
                     }
                 }

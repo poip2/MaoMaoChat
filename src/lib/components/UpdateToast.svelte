@@ -1,21 +1,23 @@
 <script lang="ts">
   import { updateAvailable, updateDismissed, dismissUpdate } from "$lib/stores/updater";
+  import { tabStore, HOME_TAB_ID } from "$lib/stores/tabs";
+
+  const { activeTabId } = tabStore;
 
   async function openRelease() {
+    const target = $updateAvailable?.download || $updateAvailable?.url;
+    if (!target) return;
     try {
       const { openUrl } = await import("@tauri-apps/plugin-opener");
-      if ($updateAvailable?.url) {
-        await openUrl($updateAvailable.url);
-      }
+      await openUrl(target);
     } catch {
-      if ($updateAvailable?.url) {
-        window.open($updateAvailable.url, "_blank");
-      }
+      window.open(target, "_blank");
     }
   }
 </script>
 
-{#if $updateAvailable && !$updateDismissed}
+<!-- Hide the toast on the home tab — UpdateBanner shows there instead. -->
+{#if $updateAvailable && !$updateDismissed && $activeTabId !== HOME_TAB_ID}
   <div class="update-toast">
     <div class="update-content">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
