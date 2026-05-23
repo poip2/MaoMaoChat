@@ -71,6 +71,25 @@ jobs:
             -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
 
+      # Notarization credentials are set via $GITHUB_ENV so they're completely
+      # absent on PR builds. Setting them inline in the Build step's env: block
+      # to '' (empty string) was being treated by Tauri as "present, attempt
+      # notarization, validate Team ID, fail" — instead we want "absent, skip
+      # notarization entirely." On non-PR events the secrets land in env
+      # normally and Tauri performs the full notarize-then-staple flow.
+      - name: Configure notarization credentials
+        if: matrix.platform == 'macos-latest' && github.event_name != 'pull_request'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          {
+            echo "APPLE_ID=$APPLE_ID"
+            echo "APPLE_PASSWORD=$APPLE_PASSWORD"
+            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
+          } >> $GITHUB_ENV
+
       - name: Build
         uses: tauri-apps/tauri-action@v0
         env:
@@ -79,12 +98,11 @@ jobs:
           # has SOMETHING to sign with — tauri.conf.json's signingIdentity is
           # null (real identity comes from env on releases), and an empty env
           # var leaves codesign with no identity at all, which fails the build.
-          # Notarization creds stay empty on PRs (Tauri skips notarization when
-          # APPLE_ID/PASSWORD/TEAM_ID are missing — just warns).
+          # APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID are not set here —
+          # they're populated via $GITHUB_ENV in the previous step only on
+          # non-PR events. See the comment on that step for why empty strings
+          # don't work as a "skip notarization" signal.
           APPLE_SIGNING_IDENTITY: ${{ matrix.platform == 'macos-latest' && (github.event_name == 'pull_request' && '-' || secrets.APPLE_SIGNING_IDENTITY) || '' }}
-          APPLE_ID: ${{ (matrix.platform == 'macos-latest' && github.event_name != 'pull_request') && secrets.APPLE_ID || '' }}
-          APPLE_PASSWORD: ${{ (matrix.platform == 'macos-latest' && github.event_name != 'pull_request') && secrets.APPLE_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ (matrix.platform == 'macos-latest' && github.event_name != 'pull_request') && secrets.APPLE_TEAM_ID || '' }}
         with:
           tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
           releaseName: ${{ startsWith(github.ref, 'refs/tags/') && format('MDHero {0}', github.ref_name) || '' }}
