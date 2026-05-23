@@ -75,7 +75,13 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APPLE_SIGNING_IDENTITY: ${{ (matrix.platform == 'macos-latest' && github.event_name != 'pull_request') && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          # On macOS PR builds, fall back to ad-hoc identity ("-") so codesign
+          # has SOMETHING to sign with — tauri.conf.json's signingIdentity is
+          # null (real identity comes from env on releases), and an empty env
+          # var leaves codesign with no identity at all, which fails the build.
+          # Notarization creds stay empty on PRs (Tauri skips notarization when
+          # APPLE_ID/PASSWORD/TEAM_ID are missing — just warns).
+          APPLE_SIGNING_IDENTITY: ${{ matrix.platform == 'macos-latest' && (github.event_name == 'pull_request' && '-' || secrets.APPLE_SIGNING_IDENTITY) || '' }}
           APPLE_ID: ${{ (matrix.platform == 'macos-latest' && github.event_name != 'pull_request') && secrets.APPLE_ID || '' }}
           APPLE_PASSWORD: ${{ (matrix.platform == 'macos-latest' && github.event_name != 'pull_request') && secrets.APPLE_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ (matrix.platform == 'macos-latest' && github.event_name != 'pull_request') && secrets.APPLE_TEAM_ID || '' }}
