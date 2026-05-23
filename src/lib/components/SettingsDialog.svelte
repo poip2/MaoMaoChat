@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { X } from "@lucide/svelte";
   import { settings } from "$lib/stores/settings";
+  import AILookupSettings from "./AILookupSettings.svelte";
 
   let { visible = $bindable(false) }: { visible: boolean } = $props();
 
@@ -22,9 +24,7 @@
       <div class="dialog-header">
         <h2 class="dialog-title">Settings</h2>
         <button onclick={() => (visible = false)} class="dialog-close" aria-label="Close">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-            <line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/>
-          </svg>
+          <X size={16} />
         </button>
       </div>
 
@@ -44,6 +44,12 @@
               class="setting-switch"
             />
           </label>
+        </section>
+
+        <section class="settings-section">
+          <h3 class="section-title">AI Lookup</h3>
+          <p class="section-hint">Right-click selected text in the viewer to send it to an AI tool. Manage providers and saved prompts below.</p>
+          <AILookupSettings />
         </section>
       </div>
     </div>
@@ -65,8 +71,8 @@
   }
 
   .dialog {
-    width: 480px;
-    max-height: 70vh;
+    width: 640px;
+    max-height: 75vh;
     background: white;
     border: 1px solid #e5e5ea;
     border-radius: 12px;
@@ -154,6 +160,14 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin: 0 0 10px;
+  }
+
+  .section-hint {
+    font-size: 11.5px;
+    color: #8e8e93;
+    margin: -6px 0 12px;
+    line-height: 1.4;
+    max-width: 52ch;
   }
 
   .setting-row {
