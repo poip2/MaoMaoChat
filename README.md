@@ -1,12 +1,12 @@
 <div align="center">
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.png">
   <source media="(prefers-color-scheme: light)" srcset=".github/assets/banner-light.png">
   <img alt="MDHero" src=".github/assets/banner-light.png" width="100%">
 </picture>
-
-A beautiful, native Markdown viewer and lightweight editor for macOS and Windows. ~11MB. Free. Open source.
+<br>
+A beautiful, native Markdown viewer and lightweight editor for macOS and Windows. ~8MB. Free. Open source.
+<br><br>
 
 [![GitHub Stars](https://img.shields.io/github/stars/vaibhavuk-dev/mdhero?style=flat-square)](https://github.com/vaibhavuk-dev/mdhero/stargazers)
 [![Downloads](https://img.shields.io/github/downloads/vaibhavuk-dev/mdhero/total?style=flat-square)](https://github.com/vaibhavuk-dev/mdhero/releases/latest)
