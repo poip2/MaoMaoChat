@@ -138,6 +138,7 @@
   .dialog-body {
     padding: 8px 16px 16px;
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .settings-section {
