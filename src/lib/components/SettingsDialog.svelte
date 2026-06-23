@@ -2,6 +2,7 @@
   import { X } from "@lucide/svelte";
   import { settings } from "$lib/stores/settings";
   import AILookupSettings from "./AILookupSettings.svelte";
+  import AIConfigSettings from "./AIConfigSettings.svelte";
 
   let { visible = $bindable(false) }: { visible: boolean } = $props();
 
@@ -50,6 +51,12 @@
           <h3 class="section-title">AI Lookup</h3>
           <p class="section-hint">Right-click selected text in the viewer to send it to an AI tool. Manage providers and saved prompts below.</p>
           <AILookupSettings />
+        </section>
+
+        <section class="settings-section">
+          <h3 class="section-title">AI Generate (Claude)</h3>
+          <p class="section-hint">Configure Claude API for in-editor AI generation. Your API key is stored in the OS keychain and never exposed to the webview.</p>
+          <AIConfigSettings />
         </section>
       </div>
     </div>

@@ -22,6 +22,7 @@
   import SettingsDialog from "$lib/components/SettingsDialog.svelte";
   import AboutDialog from "$lib/components/AboutDialog.svelte";
   import CustomPromptModal from "$lib/components/CustomPromptModal.svelte";
+  import AIGenerateModal from "$lib/components/AIGenerateModal.svelte";
   import { assembleUrlByIds, consumePendingSelection } from "$lib/stores/aiLookup";
   import FrontmatterBar from "$lib/components/FrontmatterBar.svelte";
   import StatusBar from "$lib/components/StatusBar.svelte";
@@ -35,6 +36,7 @@
   import { get } from "svelte/store";
   import { getCurrentSourceLine, scrollToSourceLine, type ViewMode } from "$lib/utils/scroll-sync";
   import { saveProgress, getProgress } from "$lib/stores/readingProgress";
+  import { streamAI, cancelAI, loadAIConfig, type AiConfigPublic } from "$lib/ai";
 
   let rendererReady = $state(false);
   let lastWatchedPath: string | null = null;
@@ -48,6 +50,9 @@
   let customPromptSelection = $state("");
   let zenMode = $state(false);
   let rawMode = $state(false);
+  let aiGenerateVisible = $state(false);
+  let aiGenerating = $state(false);
+  let aiConfig = $state<AiConfigPublic | null>(null);
 
   // Lightbox state
   let lightboxVisible = $state(false);
@@ -60,7 +65,7 @@
   // ESC handler. Each modal's own ESC handler also calls stopPropagation(); the
   // two together cover both focus-inside and focus-outside-modal cases.
   let anyModalVisible = $derived(
-    searchVisible || pasteVisible || openVisible || settingsVisible || aboutVisible || customPromptVisible || lightboxVisible
+    searchVisible || pasteVisible || openVisible || settingsVisible || aboutVisible || customPromptVisible || lightboxVisible || aiGenerateVisible
   );
 
   // Reading progress: debounced scroll save + restore guard
@@ -357,6 +362,13 @@
     // Check for updates (non-blocking, skips in dev)
     checkForUpdates();
 
+    // Load AI config status
+    try {
+      aiConfig = await loadAIConfig();
+    } catch (e) {
+      console.error("Failed to load AI config:", e);
+    }
+
     // Check for CLI file argument
     try {
       const { getMatches } = await import("@tauri-apps/plugin-cli");
@@ -586,8 +598,66 @@
         break;
     }
 
+    // Cmd+Shift+G: AI Generate
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "g") {
+      e.preventDefault();
+      if (aiGenerating) {
+        handleAICancel();
+      } else if (activeTab?.isEditing) {
+        aiGenerateVisible = true;
+      }
+      return;
+    }
+
     lastKey = e.key;
     lastKeyTime = now;
+  }
+
+  async function handleAIGenerate(prompt: string, system?: string) {
+    if (!activeTab || !activeTab.isEditing) return;
+
+    aiGenerating = true;
+    let accumulated = "";
+
+    try {
+      await streamAI(prompt, {
+        onChunk: (text) => {
+          accumulated += text;
+          // Update the editor content in real-time
+          tabStore.updateEditContent(activeTab!.id, accumulated);
+          // Mark as dirty since we're modifying content
+          if (!activeTab!.dirty) {
+            // The store update above should handle dirty flag
+          }
+        },
+        onDone: () => {
+          aiGenerating = false;
+          // Ensure final content is saved to edit buffer
+          tabStore.updateEditContent(activeTab!.id, accumulated);
+        },
+        onError: (msg) => {
+          aiGenerating = false;
+          console.error("AI generation error:", msg);
+          alert(`AI Error: ${msg}`);
+        },
+        onCancelled: () => {
+          aiGenerating = false;
+          // Keep whatever was generated so far
+          tabStore.updateEditContent(activeTab!.id, accumulated);
+        },
+      }, {
+        model: aiConfig?.model,
+        system,
+      });
+    } catch (err) {
+      aiGenerating = false;
+      console.error("AI generation failed:", err);
+      alert(`AI Error: ${err}`);
+    }
+  }
+
+  function handleAICancel() {
+    cancelAI().catch(console.error);
   }
 
   // Sync tab switching with document store — only reads $activeTabId and $tabs
@@ -690,6 +760,9 @@
       onEditToggle={handleEditToggle}
       onSave={() => activeTab && handleSave(activeTab)}
       onOpenSettings={() => (settingsVisible = true)}
+      onAIGenerate={() => (aiGenerateVisible = true)}
+      {aiGenerating}
+      onAICancel={handleAICancel}
     />
     <TabBar onCloseTab={handleCloseTab} />
   {/if}
@@ -703,6 +776,11 @@
   <SettingsDialog bind:visible={settingsVisible} />
   <AboutDialog bind:visible={aboutVisible} />
   <CustomPromptModal bind:visible={customPromptVisible} selection={customPromptSelection} />
+  <AIGenerateModal
+    bind:visible={aiGenerateVisible}
+    onGenerate={handleAIGenerate}
+    aiConfigured={aiConfig?.configured ?? false}
+  />
 
   {#if !rendererReady}
     <div class="state-center">

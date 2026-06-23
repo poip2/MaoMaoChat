@@ -12,6 +12,7 @@
     "core:window:default",
     "core:window:allow-set-title",
     "core:webview:default",
-    "core:webview:allow-print"
+    "core:webview:allow-print",
+    "core:event:allow-emit"
   ]
 }

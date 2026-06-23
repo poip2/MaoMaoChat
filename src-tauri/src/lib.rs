@@ -1,3 +1,4 @@
+mod ai;
 mod commands;
 mod menu;
 mod watcher;
@@ -37,6 +38,7 @@ pub fn run() {
         .plugin(tauri_plugin_cli::init())
         .manage(watcher::WatcherState::default())
         .manage(OpenedFiles::default())
+        .manage(ai::AiCancelFlag(std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false))))
         .invoke_handler(tauri::generate_handler![
             commands::read_markdown_file,
             commands::write_markdown_file,
@@ -47,6 +49,10 @@ pub fn run() {
             watcher::start_watching,
             watcher::stop_watching,
             get_opened_files,
+            ai::save_ai_config,
+            ai::load_ai_config,
+            ai::ai_generate,
+            ai::ai_cancel,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

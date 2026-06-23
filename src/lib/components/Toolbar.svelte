@@ -18,6 +18,9 @@
     onEditToggle = () => {},
     onSave = () => {},
     onOpenSettings = () => {},
+    onAIGenerate = () => {},
+    aiGenerating = false,
+    onAICancel = () => {},
   }: {
     onPaste?: () => void;
     onOpen?: () => void;
@@ -30,6 +33,9 @@
     onEditToggle?: () => void;
     onSave?: () => void;
     onOpenSettings?: () => void;
+    onAIGenerate?: () => void;
+    aiGenerating?: boolean;
+    onAICancel?: () => void;
   } = $props();
 
   let currentHeading = $derived(
@@ -252,6 +258,35 @@
         <line x1="8" y1="7" x2="8" y2="11"/>
       </svg>
     </button>
+
+    {#if aiGenerating}
+      <button
+        onclick={onAICancel}
+        class="btn btn-icon ai-cancel-btn"
+        title="Stop AI generation"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <rect x="3" y="3" width="10" height="10" rx="2"/>
+        </svg>
+        <span class="ai-label">Stop</span>
+      </button>
+    {:else}
+      <button
+        onclick={onAIGenerate}
+        class="btn btn-icon ai-generate-btn"
+        disabled={!isEditing}
+        title={!isEditing
+          ? 'AI Generate (enter edit mode first)'
+          : 'AI Generate (Cmd+Shift+G)'}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+        <span class="ai-label">AI</span>
+      </button>
+    {/if}
 
     <div class="separator"></div>
 
@@ -534,6 +569,44 @@
 
   :global(html.dark) .dirty-dot {
     background: #22D3EE;
+  }
+
+  .ai-generate-btn {
+    color: #0891b2;
+  }
+
+  :global(html.dark) .ai-generate-btn {
+    color: #22d3ee;
+  }
+
+  .ai-generate-btn:hover:not(:disabled) {
+    background: #e5f5f8;
+  }
+
+  :global(html.dark) .ai-generate-btn:hover:not(:disabled) {
+    background: #0a1e2e;
+  }
+
+  .ai-cancel-btn {
+    color: #c44;
+  }
+
+  :global(html.dark) .ai-cancel-btn {
+    color: #ff6b6b;
+  }
+
+  .ai-cancel-btn:hover {
+    background: #fee;
+  }
+
+  :global(html.dark) .ai-cancel-btn:hover {
+    background: #2a1414;
+  }
+
+  .ai-label {
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 4px;
   }
 
   @media print {
