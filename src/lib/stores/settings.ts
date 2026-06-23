@@ -8,7 +8,7 @@ export interface ReaderSettings {
   closeOnEscape: boolean;
 }
 
-const STORAGE_KEY = "mdhero-settings";
+const STORAGE_KEY = "maomaochat-settings";
 
 function loadSettings(): ReaderSettings {
   const defaults: ReaderSettings = {

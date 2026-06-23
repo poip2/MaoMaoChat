@@ -7,10 +7,10 @@ pub fn create_menu(app: &AppHandle) -> Result<Menu<tauri::Wry>, tauri::Error> {
     // macOS app menu (app name menu with Quit, Hide, etc.)
     let app_menu = Submenu::with_items(
         app,
-        "MDHero",
+        "MaoMaoChat",
         true,
         &[
-            &MenuItem::with_id(app, "about", "About MDHero", true, None::<&str>)?,
+            &MenuItem::with_id(app, "about", "About MaoMaoChat", true, None::<&str>)?,
             &MenuItem::with_id(
                 app,
                 "check_updates",

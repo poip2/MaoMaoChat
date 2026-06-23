@@ -1,6 +1,6 @@
 import { writable, get } from "svelte/store";
 
-const STORAGE_KEY = "mdhero-recent-files";
+const STORAGE_KEY = "maomaochat-recent-files";
 const MAX_RECENTS = 15;
 
 export interface RecentFile {

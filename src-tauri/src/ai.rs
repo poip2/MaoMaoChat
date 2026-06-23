@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::{Emitter, Manager, Window};
 
-const KEYRING_SERVICE: &str = "mdhero-ai";
+const KEYRING_SERVICE: &str = "maomaochat-ai";
 const KEYRING_USER_KEY: &str = "anthropic-api-key";
 const KEYRING_USER_URL: &str = "anthropic-base-url";
 const KEYRING_USER_MODEL: &str = "anthropic-model";

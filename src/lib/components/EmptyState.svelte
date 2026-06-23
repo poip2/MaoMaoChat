@@ -24,16 +24,16 @@
 
   let plans = $state<PlanFile[]>([]);
   let folderFiles = $state<Record<string, MdFile[]>>({});
-  let plansHidden = $state(localStorage.getItem("mdhero_plans_hidden") === "true");
+  let plansHidden = $state(localStorage.getItem("maomaochat_plans_hidden") === "true");
 
   function hidePlans() {
     plansHidden = true;
-    localStorage.setItem("mdhero_plans_hidden", "true");
+    localStorage.setItem("maomaochat_plans_hidden", "true");
   }
 
   function showPlans() {
     plansHidden = false;
-    localStorage.removeItem("mdhero_plans_hidden");
+    localStorage.removeItem("maomaochat_plans_hidden");
   }
 
   $effect(() => {
@@ -109,9 +109,9 @@
 <div class="empty-root" style="zoom: {scale};">
   <!-- Hero bar -->
   <div class="hero-bar">
-    <h1 class="hero-title">MDHero</h1>
+    <h1 class="hero-title">MaoMaoChat</h1>
     <span class="hero-sep">&mdash;</span>
-    <p class="hero-desc">A native Markdown reader and editor.</p>
+    <p class="hero-desc">A native Markdown reader & editor.</p>
   </div>
 
   <!-- Update banner (renders nothing when no update available or dismissed) -->

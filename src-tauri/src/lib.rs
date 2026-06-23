@@ -32,7 +32,7 @@ fn get_opened_files(state: tauri::State<'_, OpenedFiles>) -> Vec<String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_cli::init())
@@ -64,22 +64,22 @@ pub fn run() {
                     let id = event.id().as_ref();
                     match id {
                         "open" => {
-                            let _ = window.eval("window.__mdhero_open_file?.()");
+                            let _ = window.eval("window.__maomaochat_open_file?.()");
                         }
                         "paste_md" => {
-                            let _ = window.eval("window.__mdhero_paste?.()");
+                            let _ = window.eval("window.__maomaochat_paste?.()");
                         }
                         "theme" => {
-                            let _ = window.eval("window.__mdhero_toggle_theme?.()");
+                            let _ = window.eval("window.__maomaochat_toggle_theme?.()");
                         }
                         "find" => {
-                            let _ = window.eval("window.__mdhero_find?.()");
+                            let _ = window.eval("window.__maomaochat_find?.()");
                         }
                         "check_updates" => {
-                            let _ = window.eval("window.__mdhero_check_updates?.()");
+                            let _ = window.eval("window.__maomaochat_check_updates?.()");
                         }
                         "about" => {
-                            let _ = window.eval("window.__mdhero_about?.()");
+                            let _ = window.eval("window.__maomaochat_about?.()");
                         }
                         // AI lookup right-click menu items — forward the
                         // structured ID to the frontend router. JSON-stringify
@@ -87,7 +87,7 @@ pub fn run() {
                         // chars) survive the eval boundary cleanly.
                         s if s.starts_with("aimenu:") => {
                             let js =
-                                format!("window.__mdhero_ai_lookup?.({})", serde_json::json!(s));
+                                format!("window.__maomaochat_ai_lookup?.({})", serde_json::json!(s));
                             let _ = window.eval(&js);
                         }
                         _ => {}
@@ -127,7 +127,7 @@ pub fn run() {
                 if let Some(window) = app_handle.get_webview_window("main") {
                     for file_path in &file_paths {
                         let js = format!(
-                            "window.__mdhero_open_path?.({})",
+                            "window.__maomaochat_open_path?.({})",
                             serde_json::json!(file_path)
                         );
                         let _ = window.eval(&js);

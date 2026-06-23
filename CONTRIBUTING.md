@@ -1,6 +1,6 @@
-# Contributing to MDHero
+# Contributing to MaoMaoChat
 
-Thanks for your interest in MDHero! This is a side project, so response times may vary — but contributions are very welcome.
+Thanks for your interest in MaoMaoChat! This is a side project, so response times may vary — but contributions are very welcome.
 
 ---
 
@@ -37,8 +37,8 @@ Small PRs (bug fixes, typos, minor tweaks) don't need an issue first.
 
 ```bash
 # Clone
-git clone https://github.com/vaibhavuk-dev/mdhero.git
-cd mdhero
+git clone https://github.com/poip2/MaoMaoChat.git
+cd MaoMaoChat
 
 # Install dependencies
 pnpm install
@@ -135,7 +135,7 @@ Before submitting a PR:
 
 ## Security
 
-If you find a security issue, please email **vaibhavuk.dev@gmail.com** instead of opening a public issue.
+If you find a security issue, please open a private security advisory on GitHub instead of opening a public issue.
 
 ---
 

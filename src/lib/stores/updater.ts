@@ -9,12 +9,11 @@ function detectOS(): string {
   return "unknown";
 }
 
-const PRIMARY_ENDPOINT = "https://mdhero.app/api/version";
-const FALLBACK_GITHUB = "https://api.github.com/repos/vaibhavuk-dev/mdhero/releases/latest";
+const FALLBACK_GITHUB = "https://api.github.com/repos/poip2/MaoMaoChat/releases/latest";
 
 const CHECK_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
-const LAST_CHECK_KEY = "mdhero_update_check";
-const DISMISSED_KEY = "mdhero_update_dismissed"; // value = the version number that was dismissed
+const LAST_CHECK_KEY = "maomaochat_update_check";
+const DISMISSED_KEY = "maomaochat_update_dismissed"; // value = the version number that was dismissed
 
 export interface UpdateInfo {
   version: string;
@@ -53,22 +52,7 @@ function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-async function fetchPrimary(currentVersion: string, os: string): Promise<UpdateInfo | null> {
-  const u = `${PRIMARY_ENDPOINT}?from=${encodeURIComponent(currentVersion)}&os=${encodeURIComponent(os)}`;
-  const res = await fetch(u, { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error(`primary endpoint ${res.status}`);
-  const data = await res.json();
-  if (!data?.version || !data?.url) return null;
-  return {
-    version: String(data.version).replace(/^v/, ""),
-    url: String(data.url),
-    download: data.download ? String(data.download) : undefined,
-    notes: data.notes ? String(data.notes) : undefined,
-    severity: data.severity === "important" ? "important" : "normal",
-  };
-}
-
-async function fetchFallback(): Promise<UpdateInfo | null> {
+async function fetchLatest(): Promise<UpdateInfo | null> {
   const res = await fetch(FALLBACK_GITHUB, {
     headers: { Accept: "application/vnd.github.v3+json" },
   });
@@ -102,9 +86,9 @@ export async function checkForUpdates(force = false): Promise<void> {
 
     let latest: UpdateInfo | null = null;
     try {
-      latest = await fetchPrimary(currentVersion, os);
-    } catch {
       latest = await fetchFallback();
+    } catch {
+      latest = null;
     }
 
     if (!latest) return;

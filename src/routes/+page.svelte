@@ -276,29 +276,29 @@
     rendererReady = true;
 
     // Expose functions for native menu and OS file-open handlers
-    (window as any).__mdhero_open_file = () => { openVisible = true; };
-    (window as any).__mdhero_open_path = (path: string) => {
+    (window as any).__maomaochat_open_file = () => { openVisible = true; };
+    (window as any).__maomaochat_open_path = (path: string) => {
       if (path && rendererReady) {
         openFile(path);
       }
     };
-    (window as any).__mdhero_paste = () => {
+    (window as any).__maomaochat_paste = () => {
       pasteDefaultMode = "paste";
       pasteVisible = true;
     };
-    (window as any).__mdhero_toggle_theme = () => {
+    (window as any).__maomaochat_toggle_theme = () => {
       themeMode.update((m) => cycleTheme(m));
     };
-    (window as any).__mdhero_find = () => {
+    (window as any).__maomaochat_find = () => {
       searchVisible = !searchVisible;
     };
-    (window as any).__mdhero_zen = () => {
+    (window as any).__maomaochat_zen = () => {
       zenMode = !zenMode;
     };
-    (window as any).__mdhero_about = () => {
+    (window as any).__maomaochat_about = () => {
       aboutVisible = true;
     };
-    (window as any).__mdhero_check_updates = async () => {
+    (window as any).__maomaochat_check_updates = async () => {
       if (get(checkInFlight)) return;
       // Reset dismissal so a manual check always re-surfaces an available update.
       updateDismissed.set(false);
@@ -306,7 +306,7 @@
       // If still nothing, give the user explicit feedback — silence is confusing
       // when a menu item is the trigger.
       if (!get(updateAvailable)) {
-        alert("MDHero is up to date.");
+        alert("MaoMaoChat is up to date.");
       }
     };
     // Router for AI Lookup right-click menu items. lib.rs::setup forwards any
@@ -314,7 +314,7 @@
     // selection was stashed in the aiLookup runtime helper at contextmenu
     // capture time — we consume it here so a stale selection can't leak into
     // a future menu open.
-    (window as any).__mdhero_ai_lookup = async (menuId: string) => {
+    (window as any).__maomaochat_ai_lookup = async (menuId: string) => {
       const selection = consumePendingSelection();
       if (menuId === "aimenu:google") {
         if (!selection.trim()) return;
@@ -702,7 +702,7 @@
       });
       tocVisible.set(false);
       tocEntries.set([]);
-      getCurrentWindow().setTitle("MDHero").catch(() => {});
+      getCurrentWindow().setTitle("MaoMaoChat").catch(() => {});
       return;
     }
 
@@ -720,7 +720,7 @@
       error: null,
     });
 
-    getCurrentWindow().setTitle(`${tab.fileName} — MDHero`).catch(() => {});
+    getCurrentWindow().setTitle(`${tab.fileName} — MaoMaoChat`).catch(() => {});
 
     const savedScroll = tab.scrollTop;
     tick().then(() => {

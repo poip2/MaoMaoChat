@@ -1,6 +1,6 @@
 import { writable, get } from "svelte/store";
 
-const STORAGE_KEY = "mdhero:aiLookup";
+const STORAGE_KEY = "maomaochat:aiLookup";
 const SCHEMA_VERSION = 1 as const;
 
 export interface Prompt {

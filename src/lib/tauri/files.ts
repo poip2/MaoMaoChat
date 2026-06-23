@@ -47,7 +47,7 @@ export async function openFile(path: string): Promise<void> {
     });
 
     addRecentFile(path, fileName);
-    getCurrentWindow().setTitle(`${fileName} — MDHero`).catch(() => {});
+    getCurrentWindow().setTitle(`${fileName} — MaoMaoChat`).catch(() => {});
     invoke("start_watching", { path }).catch(() => {});
   } catch (err) {
     document.set({

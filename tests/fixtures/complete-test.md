@@ -1,14 +1,14 @@
 ---
-title: MDHero — Complete Rendering Test
+title: MaoMaoChat — Complete Rendering Test
 version: 1.0.2
-author: MDHero Team
+author: MaoMaoChat Team
 date: 2026-04-08
 tags: [markdown, test, rendering]
 ---
 
-# MDHero — Complete Rendering Test v1.0.2
+# MaoMaoChat — Complete Rendering Test v1.0.2
 
-> This file tests every rendering feature of MDHero. If everything below looks beautiful, the app is working correctly.
+> This file tests every rendering feature of MaoMaoChat. If everything below looks beautiful, the app is working correctly.
 
 ---
 
@@ -165,10 +165,10 @@ fn watch_markdown(path: &str) -> notify::Result<()> {
 
 ```bash
 #!/bin/bash
-# Build and run MDHero
+# Build and run MaoMaoChat
 set -euo pipefail
 
-echo "Building MDHero..."
+echo "Building MaoMaoChat..."
 pnpm tauri build --target universal-apple-darwin
 
 APP_SIZE=$(du -sh src-tauri/target/release/bundle/dmg/*.dmg | cut -f1)
@@ -185,9 +185,9 @@ fi
 
 ```json
 {
-  "productName": "MDHero",
+  "productName": "MaoMaoChat",
   "version": "0.1.0",
-  "identifier": "com.mdhero.app",
+  "identifier": "com.maomaochat.app",
   "bundle": {
     "fileAssociations": [
       {
@@ -399,7 +399,7 @@ sequenceDiagram
 
 ```mermaid
 gantt
-    title MDHero Development Timeline
+    title MaoMaoChat Development Timeline
     dateFormat  YYYY-MM-DD
     section Phase 1 - MVP
     Scaffold Project        :done, p1a, 2026-04-06, 1d
@@ -445,7 +445,7 @@ Below the rules. (Three different syntaxes: `---`, `***`, `___`)
 
 ## 11. HTML Entities & Special Characters
 
-Copyright © 2026 MDHero. All rights reserved.
+Copyright © 2026 MaoMaoChat. All rights reserved.
 
 Arrows: → ← ↑ ↓ ↔
 
@@ -502,4 +502,4 @@ This is a very long line that should trigger horizontal scrolling in the code bl
 
 ---
 
-*End of test document. If you can read this beautifully, MDHero is working perfectly.* ✨
+*End of test document. If you can read this beautifully, MaoMaoChat is working perfectly.* ✨

@@ -1,4 +1,4 @@
-# MDHero Test Document
+# MaoMaoChat Test Document
 
 A beautifully rendered markdown viewer. **Bold**, *italic*, ~~strikethrough~~, and `inline code`.
 

@@ -40,12 +40,12 @@
       }
       dragIndex = -1;
       overIndex = -1;
-      (window as any).__mdhero_tab_dragging = false;
+      (window as any).__maomaochat_tab_dragging = false;
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     }
 
-    (window as any).__mdhero_tab_dragging = true;
+    (window as any).__maomaochat_tab_dragging = true;
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
   }

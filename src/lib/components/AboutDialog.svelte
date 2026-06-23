@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { X } from "@lucide/svelte";
   import { getVersion } from "@tauri-apps/api/app";
-  import appIcon from "$lib/assets/mdhero-icon.png";
+  import appIcon from "$lib/assets/mdhero-icon.png";  // keep existing icon file
 
   let { visible = $bindable(false) }: { visible: boolean } = $props();
   let appVersion = $state("");
@@ -32,7 +32,7 @@
   <div class="dialog-backdrop" onclick={handleBackdropClick} onkeydown={handleKeydown}>
     <div class="dialog">
       <div class="dialog-header">
-        <h2 class="dialog-title">About MDHero</h2>
+        <h2 class="dialog-title">About MaoMaoChat</h2>
         <button onclick={() => (visible = false)} class="dialog-close" aria-label="Close">
           <X size={16} />
         </button>
@@ -40,17 +40,17 @@
 
       <div class="dialog-body">
         <div class="about-content">
-          <img src={appIcon} class="app-icon" alt="MDHero" width="48" height="48" />
-          <h3 class="app-name">MDHero</h3>
+          <img src={appIcon} class="app-icon" alt="MaoMaoChat" width="48" height="48" />
+          <h3 class="app-name">MaoMaoChat</h3>
           <p class="app-version">Version {appVersion}</p>
-          <p class="app-description">A beautiful, fast Markdown viewer for your desktop.</p>
+          <p class="app-description">A native Markdown reader and editor. Based on MDHero (MIT).</p>
           <a
             class="app-link"
-            href="https://github.com/vaibhavuk-dev/mdhero"
+            href="https://github.com/poip2/MaoMaoChat"
             target="_blank"
             rel="noopener noreferrer"
           >
-            github.com/vaibhavuk-dev/mdhero
+            github.com/poip2/MaoMaoChat
           </a>
         </div>
       </div>

@@ -218,7 +218,7 @@ pub struct MdFile {
 // any text is selected. We build a native Tauri menu from that payload and
 // popup at the cursor. Click handling is in `lib.rs::setup`'s `on_menu_event`,
 // which matches IDs starting with `aimenu:` and forwards them to the JS
-// `__mdhero_ai_lookup` window function. The selection itself is held in the
+// `__maomaochat_ai_lookup` window function. The selection itself is held in the
 // webview (not passed through here) so this command doesn't touch user content.
 
 #[derive(Deserialize)]
