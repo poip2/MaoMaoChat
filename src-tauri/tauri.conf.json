@@ -42,7 +42,7 @@
       }
     ],
     "macOS": {
-      "signingIdentity": null
+      "signingIdentity": "-"
     }
   },
   "plugins": {

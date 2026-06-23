@@ -45,76 +45,11 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
-      # Apple signing/notarization only runs for push-to-main and tag builds,
-      # not for pull_request events. Fork PRs don't have access to the upstream
-      # repo's secrets, and same-repo PRs don't need to produce signed
-      # artifacts — they just need to verify the code compiles.
-      - name: Import Apple certificate
-        if: matrix.platform == 'macos-latest' && github.event_name != 'pull_request'
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        run: |
-          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          KEYCHAIN_PASSWORD=$(openssl rand -hex 12)
-
-          echo -n "$APPLE_CERTIFICATE" | base64 --decode -o $CERTIFICATE_PATH
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          security import $CERTIFICATE_PATH -P "$APPLE_CERTIFICATE_PASSWORD" \
-            -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: \
-            -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
-
-      # Notarization credentials are set via $GITHUB_ENV so they're completely
-      # absent on PR builds. Setting them inline in the Build step's env: block
-      # to '' (empty string) was being treated by Tauri as "present, attempt
-      # notarization, validate Team ID, fail" — instead we want "absent, skip
-      # notarization entirely." On non-PR events the secrets land in env
-      # normally and Tauri performs the full notarize-then-staple flow.
-      - name: Configure notarization credentials
-        if: matrix.platform == 'macos-latest' && github.event_name != 'pull_request'
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          {
-            echo "APPLE_ID=$APPLE_ID"
-            echo "APPLE_PASSWORD=$APPLE_PASSWORD"
-            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
-          } >> $GITHUB_ENV
-
       - name: Build
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # On macOS PR builds, fall back to ad-hoc identity ("-") so codesign
-          # has SOMETHING to sign with — tauri.conf.json's signingIdentity is
-          # null (real identity comes from env on releases), and an empty env
-          # var leaves codesign with no identity at all, which fails the build.
-          # APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID are not set here —
-          # they're populated via $GITHUB_ENV in the previous step only on
-          # non-PR events. See the comment on that step for why empty strings
-          # don't work as a "skip notarization" signal.
-          APPLE_SIGNING_IDENTITY: ${{ matrix.platform == 'macos-latest' && (github.event_name == 'pull_request' && '-' || secrets.APPLE_SIGNING_IDENTITY) || '' }}
-          # Updater signing key — present only on non-PR builds (fork PRs can't
-          # access secrets). createUpdaterArtifacts is enabled via the release
-          # config overlay below, also non-PR only, so the two always line up:
-          # a build either creates signed updater artifacts (key + overlay) or
-          # creates none (PR). It never tries to create unsigned ones, which
-          # Tauri would reject.
-
         with:
-          # On non-PR builds, merge the overlay that turns on
-          # bundle.createUpdaterArtifacts (signed .tar.gz/.sig + latest.json).
-          # Kept out of the base config so PR builds don't try to sign updater
-          # artifacts without a key.
           args: ''
           tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
           releaseName: ${{ startsWith(github.ref, 'refs/tags/') && format('MaoMaoChat {0}', github.ref_name) || '' }}
@@ -122,14 +57,10 @@ jobs:
             See the full changelog in the [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}).
 
             ## Install
-            - **macOS**: Download the `.dmg` file
+            - **macOS**: Download the `.dmg` file (unsigned — right-click → Open on first launch)
             - **Windows**: Download the `.msi` installer or `.exe` (NSIS)
           releaseDraft: false
           prerelease: false
-
-      - name: Clean up keychain
-        if: always() && matrix.platform == 'macos-latest' && github.event_name != 'pull_request'
-        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
 
       - name: Upload artifacts
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
