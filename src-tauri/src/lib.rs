@@ -49,8 +49,10 @@ pub fn run() {
             watcher::start_watching,
             watcher::stop_watching,
             get_opened_files,
-            ai::save_ai_config,
-            ai::load_ai_config,
+            ai::save_ai_key,
+            ai::check_ai_keys,
+            ai::delete_ai_key,
+            ai::migrate_legacy_ai_config,
             ai::ai_generate,
             ai::ai_cancel,
         ])

@@ -1,208 +1,459 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { loadAIConfig, saveAIConfig, type AiConfigPublic } from "$lib/ai";
-  import { Eye, EyeOff } from "@lucide/svelte";
+  import { ChevronDown, ChevronRight } from "@lucide/svelte";
+  import {
+    apiConfigs,
+    initApiConfigs,
+    addConfig,
+    updateConfig,
+    removeConfig,
+    setActiveConfig,
+    refreshConfiguredStatus,
+    type ApiConfig,
+  } from "$lib/stores/apiConfigs";
+  import { saveAiKey } from "$lib/ai";
 
-  let config = $state<AiConfigPublic | null>(null);
-  let apiKey = $state("");
-  let baseUrl = $state("https://api.anthropic.com/v1");
-  let model = $state("claude-sonnet-4-20250514");
-  let showKey = $state(false);
-  let saving = $state(false);
-  let error = $state("");
-  let success = $state(false);
+  let loading = $state(true);
+  let expandedId = $state<string | null>(null);
+  let saving = $state<string | null>(null); // config ID being saved
+
+  // Form state for the currently expanded config
+  let formName = $state("");
+  let formApiKey = $state("");
+  let formBaseUrl = $state("");
+  let formModel = $state("");
+  let formError = $state("");
+  let formSuccess = $state(false);
+
+  // Add-new state
+  let addingNew = $state(false);
+  let newName = $state("");
+  let newBaseUrl = $state("https://api.anthropic.com/v1");
+  let newModel = $state("claude-sonnet-4-20250514");
+  let newError = $state("");
 
   onMount(async () => {
-    try {
-      config = await loadAIConfig();
-      baseUrl = config.base_url;
-      model = config.model;
-    } catch (e) {
-      console.error("Failed to load AI config:", e);
-    }
+    await initApiConfigs();
+    loading = false;
   });
 
-  async function handleSave() {
-    if (!apiKey.trim() && !config?.configured) {
-      error = "API Key is required";
+  function toggleExpand(c: ApiConfig) {
+    if (expandedId === c.id) {
+      expandedId = null;
+      return;
+    }
+    expandedId = c.id;
+    formName = c.name;
+    formApiKey = "";
+    formBaseUrl = c.base_url;
+    formModel = c.model;
+    formError = "";
+    formSuccess = false;
+  }
+
+  async function handleSave(c: ApiConfig) {
+    if (!formName.trim()) {
+      formError = "Name is required";
+      return;
+    }
+    if (!formBaseUrl.trim()) {
+      formError = "Base URL is required";
+      return;
+    }
+    if (!formModel.trim()) {
+      formError = "Model is required";
       return;
     }
 
-    saving = true;
-    error = "";
-    success = false;
+    saving = c.id;
+    formError = "";
+    formSuccess = false;
 
     try {
-      // Only pass apiKey if user entered a new one
-      const keyToSave = apiKey.trim() || undefined;
-      await saveAIConfig(
-        keyToSave ? apiKey : "",  // empty string means "don't change"
-        baseUrl,
-        model,
-      );
-      // Reload to confirm
-      config = await loadAIConfig();
-      apiKey = ""; // Clear the input — key is in keyring now
-      success = true;
-      setTimeout(() => (success = false), 2000);
+      // Save API key if entered
+      if (formApiKey.trim()) {
+        await saveAiKey(c.id, formApiKey.trim());
+      }
+      // Save metadata to localStorage
+      updateConfig(c.id, {
+        name: formName.trim(),
+        base_url: formBaseUrl.trim(),
+        model: formModel.trim(),
+      });
+      // Refresh keychain status
+      await refreshConfiguredStatus([c.id]);
+      formApiKey = "";
+      formSuccess = true;
+      setTimeout(() => (formSuccess = false), 2000);
     } catch (e) {
-      error = String(e);
+      formError = String(e);
     } finally {
-      saving = false;
+      saving = null;
     }
   }
 
-  function handleKeydown(e: KeyboardEvent) {
+  async function handleRemove(c: ApiConfig) {
+    const count = $apiConfigs.configs.length;
+    const msg =
+      count <= 1
+        ? `Delete "${c.name}"? This is your last config — AI generation will be unavailable until you add a new one.`
+        : `Delete "${c.name}"?`;
+    if (!confirm(msg)) return;
+
+    await removeConfig(c.id);
+    if (expandedId === c.id) {
+      expandedId = null;
+    }
+  }
+
+  function handleSetActive(c: ApiConfig) {
+    setActiveConfig(c.id);
+  }
+
+  function startAddNew() {
+    addingNew = true;
+    newName = "";
+    newBaseUrl = "https://api.anthropic.com/v1";
+    newModel = "claude-sonnet-4-20250514";
+    newError = "";
+  }
+
+  function cancelAddNew() {
+    addingNew = false;
+    newError = "";
+  }
+
+  function confirmAddNew() {
+    if (!newName.trim()) {
+      newError = "Name is required";
+      return;
+    }
+    if (!newBaseUrl.trim()) {
+      newError = "Base URL is required";
+      return;
+    }
+    if (!newModel.trim()) {
+      newError = "Model is required";
+      return;
+    }
+    addConfig(newName.trim(), newBaseUrl.trim(), newModel.trim());
+    addingNew = false;
+  }
+
+  function handleKeydownAddNew(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      cancelAddNew();
+    }
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
-      handleSave();
+      confirmAddNew();
     }
   }
 </script>
 
-<div class="ai-config" onkeydown={handleKeydown}>
-  <div class="status-badge" class:configured={config?.configured}>
-    {config?.configured ? "✓ Configured" : "Not configured"}
-  </div>
+<div class="api-configs-root">
+  {#if loading}
+    <div class="loading-msg">Loading API configs…</div>
+  {:else}
+    {#each $apiConfigs.configs as c (c.id)}
+      {@const isExpanded = expandedId === c.id}
+      {@const isActive = $apiConfigs.activeId === c.id}
 
-  <div class="field">
-    <label class="field-label" for="ai-api-key">API Key</label>
-    <div class="input-wrap">
-      <input
-        id="ai-api-key"
-        type={showKey ? "text" : "password"}
-        bind:value={apiKey}
-        placeholder={config?.configured ? "•••••••••••••••••••• (saved)" : "sk-ant-..."}
-        class="text-input"
-        autocomplete="off"
-        spellcheck="false"
-      />
-      <button
-        type="button"
-        class="toggle-vis"
-        onclick={() => (showKey = !showKey)}
-        title={showKey ? "Hide key" : "Show key"}
-      >
-        {#if showKey}
-          <EyeOff size={14} />
-        {:else}
-          <Eye size={14} />
+      <div class="config-card" class:config-expanded={isExpanded}>
+        <!-- Collapsed row -->
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="config-row" onclick={() => toggleExpand(c)}>
+          <span class="chevron" aria-hidden="true">
+            {#if isExpanded}<ChevronDown size={12} strokeWidth={2.25} />{:else}<ChevronRight size={12} strokeWidth={2.25} />{/if}
+          </span>
+          <span class="config-name">{c.name}</span>
+          {#if isActive}
+            <span class="active-badge">● Active</span>
+          {/if}
+          {#if c.configured}
+            <span class="configured-dot" title="API key configured"></span>
+          {/if}
+        </div>
+
+        {#if isExpanded}
+          <div class="config-form">
+            <div class="field">
+              <label class="field-label" for="cfg-name-{c.id}">Name</label>
+              <input
+                id="cfg-name-{c.id}"
+                type="text"
+                class="text-input"
+                bind:value={formName}
+                placeholder="e.g. Anthropic Default"
+              />
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="cfg-key-{c.id}">API Key</label>
+              <input
+                id="cfg-key-{c.id}"
+                type="password"
+                class="text-input"
+                bind:value={formApiKey}
+                placeholder={c.configured ? "•••••••••• (saved)" : "sk-ant-..."}
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <p class="field-hint">Stored in your OS keychain — never sent to the frontend.</p>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="cfg-url-{c.id}">Base URL</label>
+              <input
+                id="cfg-url-{c.id}"
+                type="text"
+                class="text-input mono"
+                bind:value={formBaseUrl}
+                placeholder="https://api.anthropic.com/v1"
+              />
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="cfg-model-{c.id}">Model</label>
+              <input
+                id="cfg-model-{c.id}"
+                type="text"
+                class="text-input mono"
+                bind:value={formModel}
+                placeholder="claude-sonnet-4-20250514"
+              />
+            </div>
+
+            {#if formError && expandedId === c.id}
+              <div class="form-error">{formError}</div>
+            {/if}
+
+            {#if formSuccess && expandedId === c.id}
+              <div class="form-success">Saved successfully</div>
+            {/if}
+
+            <div class="form-actions">
+              <button
+                class="form-btn"
+                onclick={() => handleSetActive(c)}
+                disabled={isActive}
+                title={isActive ? "Already active" : "Set as active config"}
+              >
+                {isActive ? "● Active" : "Set as active"}
+              </button>
+              <button
+                class="form-btn form-btn-danger"
+                onclick={() => handleRemove(c)}
+              >
+                Delete
+              </button>
+              <button
+                class="form-btn form-btn-primary"
+                onclick={() => handleSave(c)}
+                disabled={saving === c.id}
+              >
+                {saving === c.id ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
         {/if}
-      </button>
-    </div>
-    <p class="field-hint">Stored in your OS keychain — never sent to the frontend.</p>
-  </div>
+      </div>
+    {/each}
 
-  <div class="field">
-    <label class="field-label" for="ai-base-url">Base URL</label>
-    <input
-      id="ai-base-url"
-      type="text"
-      bind:value={baseUrl}
-      placeholder="https://api.anthropic.com/v1"
-      class="text-input mono"
-    />
-    <p class="field-hint">
-      Must end with <code>/v1</code>. Examples:
-      <code>https://api.anthropic.com/v1</code> or a proxy like
-      <code>https://proxy.example.com/v1</code>.
-    </p>
-  </div>
+    {#if addingNew}
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+      <div class="config-card config-expanded" onkeydown={handleKeydownAddNew}>
+        <div class="config-form">
+          <div class="field">
+            <label class="field-label" for="new-name">Name</label>
+            <input
+              id="new-name"
+              type="text"
+              class="text-input"
+              bind:value={newName}
+              placeholder="e.g. Anthropic Default"
+            />
+          </div>
 
-  <div class="field">
-    <label class="field-label" for="ai-model">Model</label>
-    <input
-      id="ai-model"
-      type="text"
-      bind:value={model}
-      placeholder="claude-sonnet-4-20250514"
-      class="text-input mono"
-    />
-    <p class="field-hint">
-      Default: <code>claude-sonnet-4-20250514</code>. Other options: <code>claude-3-5-sonnet-20241022</code>, <code>claude-3-opus-20240229</code>, etc.
-    </p>
-  </div>
+          <div class="field">
+            <label class="field-label" for="new-url">Base URL</label>
+            <input
+              id="new-url"
+              type="text"
+              class="text-input mono"
+              bind:value={newBaseUrl}
+              placeholder="https://api.anthropic.com/v1"
+            />
+          </div>
 
-  {#if error}
-    <div class="error-msg">{error}</div>
+          <div class="field">
+            <label class="field-label" for="new-model">Model</label>
+            <input
+              id="new-model"
+              type="text"
+              class="text-input mono"
+              bind:value={newModel}
+              placeholder="claude-sonnet-4-20250514"
+            />
+          </div>
+
+          {#if newError}
+            <div class="form-error">{newError}</div>
+          {/if}
+
+          <div class="form-actions">
+            <button class="form-btn" onclick={cancelAddNew}>Cancel</button>
+            <button class="form-btn form-btn-primary" onclick={confirmAddNew}>Add</button>
+          </div>
+        </div>
+      </div>
+    {:else}
+      <button class="add-config-btn" onclick={startAddNew}>+ Add API config</button>
+    {/if}
   {/if}
-
-  {#if success}
-    <div class="success-msg">Saved successfully</div>
-  {/if}
-
-  <button
-    class="save-btn"
-    onclick={handleSave}
-    disabled={saving}
-  >
-    {saving ? "Saving…" : "Save Configuration"}
-  </button>
 </div>
 
 <style>
-  .ai-config {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    font-size: 11px;
-    font-weight: 600;
-    border-radius: 6px;
-    background: #fee;
-    color: #c44;
-    align-self: flex-start;
-  }
-
-  .status-badge.configured {
-    background: #d4f5e9;
-    color: #0d7a4f;
-  }
-
-  :global(html.dark) .status-badge {
-    background: #2a1414;
-    color: #ff6b6b;
-  }
-
-  :global(html.dark) .status-badge.configured {
-    background: #0d2818;
-    color: #4ade80;
-  }
-
-  .field {
+  .api-configs-root {
     display: flex;
     flex-direction: column;
     gap: 4px;
   }
 
-  .field-label {
+  .loading-msg {
     font-size: 12px;
+    color: #8e8e93;
+    padding: 8px 0;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  /* --- Config card ------------------------------------------------------ */
+
+  .config-card {
+    border: 1px solid #e5e5ea;
+    border-radius: 8px;
+    background: transparent;
+    overflow: hidden;
+  }
+
+  :global(html.dark) .config-card {
+    border-color: #3a3a3c;
+  }
+
+  .config-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.12s;
+  }
+
+  .config-row:hover {
+    background: #f7f7f9;
+  }
+
+  :global(html.dark) .config-row:hover {
+    background: #2a2a2c;
+  }
+
+  .chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #aeaeb2;
+    width: 14px;
+    flex-shrink: 0;
+  }
+
+  .config-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1c1c1e;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(html.dark) .config-name {
+    color: #e5e5e7;
+  }
+
+  .active-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: #0d7a4f;
+    background: #d4f5e9;
+    padding: 2px 8px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+
+  :global(html.dark) .active-badge {
+    color: #4ade80;
+    background: #0d2818;
+  }
+
+  .configured-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    flex-shrink: 0;
+  }
+
+  :global(html.dark) .configured-dot {
+    background: #4ade80;
+  }
+
+  /* --- Expanded form ---------------------------------------------------- */
+
+  .config-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    background: #f9f9fb;
+    border-top: 1px solid #e5e5ea;
+  }
+
+  :global(html.dark) .config-form {
+    background: #1c1c1e;
+    border-top-color: #3a3a3c;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .field-label {
+    font-size: 11px;
     font-weight: 600;
     color: #636366;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
   }
 
   :global(html.dark) .field-label {
     color: #aeaeb2;
   }
 
-  .input-wrap {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-
   .text-input {
-    width: 100%;
     background: white;
     border: 1px solid #d1d1d6;
-    border-radius: 6px;
-    padding: 7px 10px;
+    border-radius: 5px;
+    padding: 6px 8px;
     font-size: 12px;
     font-family: inherit;
     color: #1c1c1e;
@@ -214,7 +465,7 @@
   }
 
   :global(html.dark) .text-input {
-    background: #1c1c1e;
+    background: #2c2c2e;
     border-color: #3a3a3c;
     color: #e5e5e7;
   }
@@ -224,101 +475,128 @@
     border-color: #0891b2;
   }
 
-  .input-wrap .text-input {
-    padding-right: 32px;
-  }
-
-  .toggle-vis {
-    position: absolute;
-    right: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    background: none;
-    border: none;
-    color: #8e8e93;
-    cursor: pointer;
-    border-radius: 4px;
-  }
-
-  .toggle-vis:hover {
-    background: #f2f2f7;
-    color: #1c1c1e;
-  }
-
-  :global(html.dark) .toggle-vis:hover {
-    background: #3a3a3c;
-    color: #e5e5e7;
-  }
-
   .field-hint {
-    font-size: 11px;
+    font-size: 10px;
     color: #8e8e93;
-    line-height: 1.4;
+    line-height: 1.3;
     margin: 0;
   }
 
-  .field-hint code {
-    font-family: "SF Mono", "JetBrains Mono", Menlo, monospace;
-    font-size: 10px;
-    background: #f2f2f7;
-    padding: 1px 4px;
-    border-radius: 3px;
-    color: #0e7490;
-  }
-
-  :global(html.dark) .field-hint code {
-    background: #2c2c2e;
-    color: #22d3ee;
-  }
-
-  .error-msg {
+  .form-error {
     font-size: 11px;
     color: #c44;
-    padding: 6px 10px;
+    padding: 4px 8px;
     background: #fef2f2;
-    border-radius: 6px;
+    border-radius: 5px;
   }
 
-  :global(html.dark) .error-msg {
+  :global(html.dark) .form-error {
     color: #ff6b6b;
     background: #2a1414;
   }
 
-  .success-msg {
+  .form-success {
     font-size: 11px;
     color: #0d7a4f;
-    padding: 6px 10px;
+    padding: 4px 8px;
     background: #d4f5e9;
-    border-radius: 6px;
+    border-radius: 5px;
   }
 
-  :global(html.dark) .success-msg {
+  :global(html.dark) .form-success {
     color: #4ade80;
     background: #0d2818;
   }
 
-  .save-btn {
-    align-self: flex-start;
-    padding: 6px 16px;
-    background: #0891b2;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.12s;
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 2px;
   }
 
-  .save-btn:hover:not(:disabled) {
+  .form-btn {
+    padding: 5px 12px;
+    background: white;
+    border: 1px solid #d1d1d6;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1c1c1e;
+    cursor: pointer;
+    transition: background 0.12s, opacity 0.12s;
+  }
+
+  :global(html.dark) .form-btn {
+    background: #2c2c2e;
+    border-color: #3a3a3c;
+    color: #e5e5e7;
+  }
+
+  .form-btn:hover:not(:disabled) {
+    background: #f2f2f7;
+  }
+
+  :global(html.dark) .form-btn:hover:not(:disabled) {
+    background: #3a3a3c;
+  }
+
+  .form-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .form-btn-primary {
+    background: #0891b2;
+    border-color: #0891b2;
+    color: white;
+  }
+
+  .form-btn-primary:hover:not(:disabled) {
     background: #0e7490;
   }
 
-  .save-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .form-btn-danger:hover {
+    background: #fee;
+    color: #c44;
+    border-color: #fcc;
+  }
+
+  :global(html.dark) .form-btn-danger:hover {
+    background: #2a1414;
+    color: #ff6b6b;
+    border-color: #4a1a1a;
+  }
+
+  /* --- Add button ------------------------------------------------------- */
+
+  .add-config-btn {
+    background: none;
+    border: 1px dashed #d1d1d6;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: #8e8e93;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    margin-top: 8px;
+    text-align: center;
+    width: 100%;
+  }
+
+  :global(html.dark) .add-config-btn {
+    border-color: #48484a;
+  }
+
+  .add-config-btn:hover {
+    background: #f2f2f7;
+    color: #1c1c1e;
+    border-color: #aeaeb2;
+  }
+
+  :global(html.dark) .add-config-btn:hover {
+    background: #2c2c2e;
+    color: #e5e5e7;
+    border-color: #636366;
   }
 </style>

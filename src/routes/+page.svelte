@@ -36,7 +36,8 @@
   import { get } from "svelte/store";
   import { getCurrentSourceLine, scrollToSourceLine, type ViewMode } from "$lib/utils/scroll-sync";
   import { saveProgress, getProgress } from "$lib/stores/readingProgress";
-  import { streamAI, cancelAI, loadAIConfig, type AiConfigPublic } from "$lib/ai";
+  import { streamAI, cancelAI } from "$lib/ai";
+  import { getActiveConfig } from "$lib/stores/apiConfigs";
 
   let rendererReady = $state(false);
   let lastWatchedPath: string | null = null;
@@ -52,7 +53,6 @@
   let rawMode = $state(false);
   let aiGenerateVisible = $state(false);
   let aiGenerating = $state(false);
-  let aiConfig = $state<AiConfigPublic | null>(null);
 
   // Lightbox state
   let lightboxVisible = $state(false);
@@ -362,13 +362,6 @@
     // Check for updates (non-blocking, skips in dev)
     checkForUpdates();
 
-    // Load AI config status
-    try {
-      aiConfig = await loadAIConfig();
-    } catch (e) {
-      console.error("Failed to load AI config:", e);
-    }
-
     // Check for CLI file argument
     try {
       const { getMatches } = await import("@tauri-apps/plugin-cli");
@@ -620,19 +613,20 @@
     let accumulated = "";
 
     try {
+      const active = getActiveConfig();
+      if (!active?.configured) {
+        aiGenerating = false;
+        alert("No active API config set. Please configure an API key in Settings.");
+        return;
+      }
+
       await streamAI(prompt, {
         onChunk: (text) => {
           accumulated += text;
-          // Update the editor content in real-time
           tabStore.updateEditContent(activeTab!.id, accumulated);
-          // Mark as dirty since we're modifying content
-          if (!activeTab!.dirty) {
-            // The store update above should handle dirty flag
-          }
         },
         onDone: () => {
           aiGenerating = false;
-          // Ensure final content is saved to edit buffer
           tabStore.updateEditContent(activeTab!.id, accumulated);
         },
         onError: (msg) => {
@@ -642,11 +636,12 @@
         },
         onCancelled: () => {
           aiGenerating = false;
-          // Keep whatever was generated so far
           tabStore.updateEditContent(activeTab!.id, accumulated);
         },
       }, {
-        model: aiConfig?.model,
+        configId: active.id,
+        baseUrl: active.base_url,
+        model: active.model,
         system,
       });
     } catch (err) {
@@ -779,7 +774,7 @@
   <AIGenerateModal
     bind:visible={aiGenerateVisible}
     onGenerate={handleAIGenerate}
-    aiConfigured={aiConfig?.configured ?? false}
+    aiConfigured={getActiveConfig()?.configured ?? false}
   />
 
   {#if !rendererReady}

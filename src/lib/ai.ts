@@ -1,12 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
-export interface AiConfigPublic {
-  configured: boolean;
-  base_url: string;
-  model: string;
-}
-
 export interface StreamHandlers {
   onChunk: (text: string) => void;
   onThinking?: (text: string) => void;
@@ -22,7 +16,7 @@ export interface StreamHandlers {
 export async function streamAI(
   prompt: string,
   handlers: StreamHandlers,
-  opts?: { model?: string; system?: string },
+  opts: { configId: string; baseUrl: string; model: string; system?: string },
 ): Promise<void> {
   const uns: UnlistenFn[] = [];
   const cleanup = () => uns.forEach((u) => u());
@@ -56,8 +50,10 @@ export async function streamAI(
   try {
     await invoke("ai_generate", {
       prompt,
-      model: opts?.model,
-      system: opts?.system,
+      configId: opts.configId,
+      baseUrl: opts.baseUrl,
+      model: opts.model,
+      system: opts.system,
     });
   } catch (err) {
     // invoke itself failed (e.g. keyring read error before stream starts)
@@ -69,13 +65,18 @@ export async function streamAI(
 /** Cancel an in-flight generation. */
 export const cancelAI = () => invoke("ai_cancel");
 
-/** Persist API key + base URL into the OS keychain. */
-export const saveAIConfig = (
-  apiKey: string,
-  baseUrl: string,
-  model?: string,
-) => invoke("save_ai_config", { apiKey, baseUrl, model });
+/** Save an API key for a config (keychain only, skips if empty). */
+export const saveAiKey = (id: string, apiKey: string) =>
+  invoke("save_ai_key", { id, apiKey });
 
-/** Load the public part of the AI config (no key). */
-export const loadAIConfig = (): Promise<AiConfigPublic> =>
-  invoke("load_ai_config");
+/** Check which config IDs have API keys stored in keychain. */
+export const checkAiKeys = (ids: string[]): Promise<boolean[]> =>
+  invoke("check_ai_keys", { ids });
+
+/** Delete the API key for a config from keychain (idempotent). */
+export const deleteAiKey = (id: string) =>
+  invoke("delete_ai_key", { id });
+
+/** Migrate legacy single-config keychain entries to the new per-config scheme. */
+export const migrateLegacyAiConfig = (): Promise<{ migrated: boolean; id: string }> =>
+  invoke("migrate_legacy_ai_config");

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { tick } from "svelte";
-  import { loadAIConfig } from "$lib/ai";
 
   let {
     visible = $bindable(false),
