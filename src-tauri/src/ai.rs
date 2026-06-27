@@ -63,7 +63,7 @@ pub fn check_ai_keys(ids: Vec<String>) -> Result<Vec<bool>, String> {
 pub fn delete_ai_key(id: String) -> Result<(), String> {
     let entry = get_keyring(&config_keyring_key(&id))?;
     // Ignore error if the entry doesn't exist (idempotent)
-    let _ = entry.delete_password();
+    let _ = entry.delete_credential();
     Ok(())
 }
 
@@ -90,9 +90,9 @@ pub fn migrate_legacy_ai_config() -> Result<MigrateResult, String> {
         .map_err(|e| format!("Failed to migrate API key: {}", e))?;
 
     // Delete the legacy entries
-    let _ = legacy_entry.delete_password();
-    let _ = get_keyring(LEGACY_KEY_URL)?.delete_password();
-    let _ = get_keyring(LEGACY_KEY_MODEL)?.delete_password();
+    let _ = legacy_entry.delete_credential();
+    let _ = get_keyring(LEGACY_KEY_URL)?.delete_credential();
+    let _ = get_keyring(LEGACY_KEY_MODEL)?.delete_credential();
 
     Ok(MigrateResult {
         migrated: true,
