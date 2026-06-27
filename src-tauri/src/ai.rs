@@ -48,11 +48,13 @@ pub fn save_ai_config(
     let _ = url::Url::parse(&format!("{}/messages", normalized))
         .map_err(|_| "Invalid base URL".to_string())?;
 
-    // Store API key
-    let entry = get_keyring(KEYRING_USER_KEY)?;
-    entry
-        .set_password(&api_key)
-        .map_err(|e| format!("Failed to save API key: {}", e))?;
+    // Store API key (skip if empty — don't overwrite an existing key)
+    if !api_key.is_empty() {
+        let entry = get_keyring(KEYRING_USER_KEY)?;
+        entry
+            .set_password(&api_key)
+            .map_err(|e| format!("Failed to save API key: {}", e))?;
+    }
 
     // Store base URL
     let entry = get_keyring(KEYRING_USER_URL)?;
@@ -62,10 +64,12 @@ pub fn save_ai_config(
 
     // Store model (optional)
     if let Some(m) = model {
-        let entry = get_keyring(KEYRING_USER_MODEL)?;
-        entry
-            .set_password(&m)
-            .map_err(|e| format!("Failed to save model: {}", e))?;
+        if !m.is_empty() {
+            let entry = get_keyring(KEYRING_USER_MODEL)?;
+            entry
+                .set_password(&m)
+                .map_err(|e| format!("Failed to save model: {}", e))?;
+        }
     }
 
     Ok(())
@@ -132,15 +136,15 @@ pub async fn ai_generate(
         CreateMessageParams::new(params).with_stream(true)
     };
 
+    // Reset cancellation flag
+    cancel_flag.0.store(false, Ordering::SeqCst);
+    let cancelled = cancel_flag.0.clone();
+
     // Create stream
     let mut stream = client
         .create_message_streaming(&body)
         .await
         .map_err(|e| format!("Stream error: {}", e))?;
-
-    // Reset cancellation flag
-    cancel_flag.0.store(false, Ordering::SeqCst);
-    let cancelled = cancel_flag.0.clone();
 
     // Process stream
     while let Some(result) = stream.next().await {
